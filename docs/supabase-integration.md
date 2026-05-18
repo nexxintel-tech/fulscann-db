@@ -78,6 +78,16 @@ business_id/report_id/file-name.ext
 
 That path format is required by the RLS policies that authorize business members and assigned analysts.
 
+## Verify Connection
+
+Run:
+
+```bash
+npm run supabase:verify
+```
+
+This checks that `.env.local` can reach the Supabase project with the service role, confirms core tables are readable, and confirms the `evidence-files` bucket exists and is private. The command prints counts/status only, not secrets.
+
 ## First Secure Workflow Test
 
 1. Sign in as a CEO.
