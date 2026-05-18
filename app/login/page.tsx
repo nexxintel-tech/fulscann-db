@@ -20,7 +20,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </section>
 
       <section className="card" style={{ maxWidth: 520 }}>
-        {params.error ? <p style={{ color: "var(--danger)", marginBottom: 16 }}>Unable to sign in. Check the account and profile setup.</p> : null}
+        {params.error ? (
+          <p style={{ color: "var(--danger)", marginBottom: 16 }}>{getLoginErrorMessage(params.error)}</p>
+        ) : null}
         {!supabaseConfigured ? (
           <p style={{ marginBottom: 16 }}>
             Supabase is not configured, so this build is running in demo mode. Submitting will open the Super Admin
@@ -43,4 +45,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </section>
     </div>
   );
+}
+
+function getLoginErrorMessage(error: string) {
+  if (error === "missing-profile") {
+    return "Sign-in succeeded, but this Auth user does not have a Fulscann profile yet.";
+  }
+
+  if (error === "staff-invite-login") {
+    return "Sign in with the email address that received the staff invitation.";
+  }
+
+  return "Unable to sign in. Check the account and profile setup.";
 }
