@@ -50,6 +50,22 @@ In Supabase Auth:
 
 The `profiles` table must contain a row for internal users. Staff invite acceptance can create or update the invited user's profile automatically.
 
+## Bootstrap Real Profiles
+
+After creating the first Auth users, run `supabase/bootstrap_profiles.sql` in the Supabase SQL editor.
+
+Before running it, replace the placeholder emails and names with your real accounts:
+
+```sql
+('admin@yourdomain.com', 'Fulscann Super Admin', 'super_admin'),
+('analyst@yourdomain.com', 'Fulscann Analyst', 'analyst'),
+('ceo@yourbusiness.com', 'Business CEO', 'business_user')
+```
+
+This step is required because the app authorizes users from `public.profiles`, while Supabase Auth owns the actual login identity in `auth.users`. The profile `id` must match the Auth user `id`.
+
+Do not use `db/seed.sql` for the live project unless you intentionally want demo records. The seed file contains fixed sample UUIDs and is mainly for local/demo validation.
+
 ## Storage Setup
 
 The migration creates a private `evidence-files` bucket and storage policies.
