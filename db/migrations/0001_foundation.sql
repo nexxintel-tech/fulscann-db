@@ -62,7 +62,7 @@ create table if not exists staff_invitations (
   email text not null,
   role text not null check (role in ('sales_officer', 'finance_officer', 'procurement_officer', 'operations_officer', 'hr_admin')),
   status text not null default 'pending' check (status in ('pending', 'accepted', 'revoked')),
-  invitation_token text not null default encode(gen_random_bytes(24), 'hex'),
+  invitation_token text not null default replace(gen_random_uuid()::text, '-', ''),
   invited_by uuid not null references profiles(id),
   created_at timestamptz not null default now(),
   accepted_at timestamptz,
