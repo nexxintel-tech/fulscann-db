@@ -66,6 +66,20 @@ This step is required because the app authorizes users from `public.profiles`, w
 
 Do not use `db/seed.sql` for the live project unless you intentionally want demo records. The seed file contains fixed sample UUIDs and is mainly for local/demo validation.
 
+Alternatively, create the first Auth users and matching profiles from this project without committing any credentials:
+
+```powershell
+$env:FULSCANN_BOOTSTRAP_USERS='[
+  {"email":"admin@yourdomain.com","password":"ChangeThisAdminPassword1!","fullName":"Fulscann Super Admin","platformRole":"super_admin"},
+  {"email":"analyst@yourdomain.com","password":"ChangeThisAnalystPassword1!","fullName":"Fulscann Analyst","platformRole":"analyst"},
+  {"email":"ceo@yourbusiness.com","password":"ChangeThisCeoPassword1!","fullName":"Business CEO","platformRole":"business_user"}
+]'
+npm run supabase:bootstrap-auth
+Remove-Item Env:FULSCANN_BOOTSTRAP_USERS
+```
+
+The script uses the server-only service role key from `.env.local`, confirms Auth emails if it creates them, and upserts `public.profiles` with matching Auth user IDs.
+
 ## Storage Setup
 
 The migration creates a private `evidence-files` bucket and storage policies.

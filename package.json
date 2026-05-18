@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "supabase:bootstrap-auth": "node scripts/bootstrap-auth-users.mjs",
     "supabase:verify": "node scripts/verify-supabase.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
