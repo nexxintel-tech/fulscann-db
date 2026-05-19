@@ -24,6 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               <Link href="/dashboard/ceo">CEO</Link>
               <Link href="/dashboard/staff">Staff</Link>
               <Link href="/institution">Institution</Link>
+              <Link href="/ic">IC Test</Link>
             </nav>
           </header>
           <main className="main">{children}</main>
