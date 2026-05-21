@@ -2,6 +2,7 @@ import type {
   Analyst,
   AnalystAssignment,
   AnalystNote,
+  AnalystEscalation,
   Business,
   CeoResponse,
   ControlException,
@@ -70,6 +71,17 @@ type AnalystNoteRow = {
   note_type: AnalystNote["noteType"];
   body: string;
   visibility: AnalystNote["visibility"];
+  created_at: string;
+};
+
+type AnalystEscalationRow = {
+  id: string;
+  business_id: string;
+  analyst_user_id: string;
+  escalated_to: string;
+  risk_level: AnalystEscalation["riskLevel"];
+  reason: string;
+  status: AnalystEscalation["status"];
   created_at: string;
 };
 
@@ -228,6 +240,19 @@ export function mapAnalystNote(row: AnalystNoteRow): AnalystNote {
     body: row.body,
     visibility: row.visibility,
     createdAt: row.created_at
+  };
+}
+
+export function mapAnalystEscalation(row: AnalystEscalationRow): AnalystEscalation {
+  return {
+    id: row.id,
+    businessId: row.business_id,
+    analystId: row.analyst_user_id,
+    escalatedTo: row.escalated_to,
+    riskLevel: row.risk_level,
+    reason: row.reason,
+    status: row.status,
+    daysOpen: getDaysAgo(row.created_at)
   };
 }
 

@@ -2,6 +2,7 @@ import type {
   Analyst,
   AnalystAssignment,
   AnalystNote,
+  AnalystEscalation,
   Business,
   CeoResponse,
   ControlException,
@@ -159,6 +160,19 @@ export const analystNotes: AnalystNote[] = [
     body: "Finance inflow is lower than reported sales. Add supporting evidence or explain the timing difference.",
     visibility: "business_visible",
     createdAt: "2026-05-18T07:30:00.000Z"
+  }
+];
+
+export const analystEscalations: AnalystEscalation[] = [
+  {
+    id: "esc_001",
+    businessId: "biz_002",
+    analystId: "usr_ana_001",
+    escalatedTo: "usr_super_001",
+    riskLevel: "Orange",
+    reason: "Sales-finance mismatch remains unresolved after Analyst review.",
+    status: "open",
+    daysOpen: 2
   }
 ];
 

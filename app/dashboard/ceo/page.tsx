@@ -263,5 +263,6 @@ function getActionMessage(status: string) {
   if (status === "report-revoked") return "Integrity Report access revoked and audited.";
   if (status === "demo") return "Demo mode: connect Supabase to persist CEO actions.";
   if (status === "invalid") return "Complete the required fields before submitting.";
+  if (status === "invalid-transition") return "Only unresolved exceptions can be resolved by the CEO.";
   return `Action failed: ${status}`;
 }

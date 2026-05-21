@@ -41,6 +41,17 @@ export type ControlException = {
   daysOpen: number;
 };
 
+export type AnalystEscalation = {
+  id: string;
+  businessId: string;
+  analystId: string;
+  escalatedTo: string;
+  riskLevel: RiskLevel;
+  reason: string;
+  status: ExceptionStatus;
+  daysOpen: number;
+};
+
 export type DepartmentReport = {
   id: string;
   businessId: string;

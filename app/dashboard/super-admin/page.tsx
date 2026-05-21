@@ -1,22 +1,24 @@
 import { StatCard } from "@/components/ui/stat-card";
 import { IcActionTable } from "@/components/dashboard/ic-action-table";
-import { assignBusinessToAnalyst } from "@/app/dashboard/super-admin/actions";
+import { assignBusinessToAnalyst, moveEscalationLifecycle } from "@/app/dashboard/super-admin/actions";
+import { canMoveEscalationStatus } from "@/lib/ic-engine/actions";
 import { getAnalystWorkloads, getAssignableAnalysts, getUnassignedBusinesses } from "@/lib/analyst/workload";
 import { getPlatformSnapshot } from "@/lib/data/repository";
 import { getBusinessesNeedingIcAction, getIcBusinessActions, getIcRiskDistribution } from "@/lib/ic-engine/dashboard";
 
 type SuperAdminDashboardProps = {
-  searchParams: Promise<{ assignment?: string }>;
+  searchParams: Promise<{ assignment?: string; escalation?: string }>;
 };
 
 export default async function SuperAdminDashboard({ searchParams }: SuperAdminDashboardProps) {
   const params = await searchParams;
-  const { businesses, analysts, analystAssignments, controlExceptions, icScoreResults } = await getPlatformSnapshot();
+  const { businesses, analysts, analystAssignments, analystEscalations, controlExceptions, icScoreResults } = await getPlatformSnapshot();
   const workloads = getAnalystWorkloads(analysts, analystAssignments);
   const unassignedBusinesses = getUnassignedBusinesses(businesses, analystAssignments);
   const assignableAnalysts = getAssignableAnalysts(analysts, analystAssignments);
   const unassignedCount = unassignedBusinesses.length;
-  const escalatedCases = controlExceptions.filter((exception) => exception.riskLevel === "Red").length;
+  const openEscalations = analystEscalations.filter((escalation) => escalation.status !== "resolved");
+  const escalatedCases = openEscalations.length;
   const reportPipeline = businesses.filter((business) => business.integrityReportReady).length;
   const icActions = getIcBusinessActions(businesses, controlExceptions, icScoreResults);
   const icActionQueue = getBusinessesNeedingIcAction(icActions);
@@ -42,6 +44,46 @@ export default async function SuperAdminDashboard({ searchParams }: SuperAdminDa
       <section className="card">
         <h2>Platform IC action queue</h2>
         <IcActionTable rows={icActionQueue} />
+      </section>
+
+      <section className="card">
+        <h2>Escalation lifecycle</h2>
+        <p>Super Admins handle escalated Analyst issues and route them to closure without taking CEO ownership.</p>
+        {params.escalation ? <p className="notice">{getEscalationMessage(params.escalation)}</p> : null}
+        <ul className="list">
+          {openEscalations.map((escalation) => {
+            const business = businesses.find((item) => item.id === escalation.businessId);
+            const analyst = analysts.find((item) => item.id === escalation.analystId);
+
+            return (
+              <li key={escalation.id}>
+                <strong>{business?.legalName ?? "Business"} - {escalation.riskLevel} escalation</strong>
+                <br />
+                Analyst: {analyst?.name ?? "Unknown"}; status: {escalation.status}; open {escalation.daysOpen} days
+                <p>{escalation.reason}</p>
+                <div className="form-inline">
+                  <form action={moveEscalationLifecycle} className="compact-form">
+                    <input type="hidden" name="businessId" value={escalation.businessId} />
+                    <input type="hidden" name="escalationId" value={escalation.id} />
+                    <input type="hidden" name="nextStatus" value="in_review" />
+                    <button className="button" type="submit" disabled={!canMoveEscalationStatus("super_admin", escalation.status, "in_review")}>
+                      Start review
+                    </button>
+                  </form>
+                  <form action={moveEscalationLifecycle} className="compact-form">
+                    <input type="hidden" name="businessId" value={escalation.businessId} />
+                    <input type="hidden" name="escalationId" value={escalation.id} />
+                    <input type="hidden" name="nextStatus" value="resolved" />
+                    <button className="button primary" type="submit" disabled={!canMoveEscalationStatus("super_admin", escalation.status, "resolved")}>
+                      Resolve escalation
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })}
+          {openEscalations.length === 0 ? <li>No open escalations.</li> : null}
+        </ul>
       </section>
 
       <section className="card">
@@ -138,4 +180,13 @@ function getAssignmentMessage(status: string) {
   }
 
   return `Assignment failed: ${status}`;
+}
+
+function getEscalationMessage(status: string) {
+  if (status === "in-review") return "Escalation moved to Super Admin review and audited.";
+  if (status === "resolved") return "Escalation resolved and audited.";
+  if (status === "demo") return "Demo mode: connect Supabase to persist escalation actions.";
+  if (status === "invalid") return "Choose a valid escalation action.";
+  if (status === "invalid-transition") return "That escalation lifecycle movement is not allowed.";
+  return `Escalation update failed: ${status}`;
 }

@@ -1,5 +1,6 @@
 import {
   analystAssignments,
+  analystEscalations,
   analystNotes,
   analysts,
   assessmentResults,
@@ -21,6 +22,7 @@ export function getDemoSnapshot() {
     businesses,
     analysts,
     analystAssignments,
+    analystEscalations,
     controlExceptions,
     departmentReports,
     analystNotes,

@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { createSupabaseRouteClient } from "@/lib/supabase/server";
+import {
+  canEscalateException,
+  canMoveExceptionStatus,
+  canRequestExceptionClarification
+} from "@/lib/ic-engine/actions";
+import { hasSupabaseConfig, hasSupabaseServiceConfig } from "@/lib/supabase/config";
+import { createSupabaseAdminClient, createSupabaseRouteClient } from "@/lib/supabase/server";
+import type { ControlException } from "@/lib/types";
 
 const businessActionSchema = z.object({
   businessId: z.string().min(1),
@@ -20,12 +26,208 @@ const reportReviewSchema = z.object({
   reportKey: z.string().min(3)
 });
 
+const exceptionActionSchema = z.object({
+  businessId: z.string().min(1),
+  exceptionId: z.string().min(1),
+  body: z.string().min(3).max(2000).optional()
+});
+
 export async function addInternalNote(formData: FormData) {
   await writeAnalystNote(formData, "internal_note", "internal");
 }
 
 export async function requestClarification(formData: FormData) {
   await writeAnalystNote(formData, "clarification_request", "business_visible");
+}
+
+export async function markExceptionInReview(formData: FormData) {
+  const profile = await requireRole(["analyst"]);
+  const parsed = exceptionActionSchema.safeParse({
+    businessId: formData.get("businessId"),
+    exceptionId: formData.get("exceptionId"),
+    body: "review"
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/analyst?action=invalid");
+  }
+
+  if (!hasSupabaseConfig() || !hasSupabaseServiceConfig()) {
+    redirect("/dashboard/analyst?action=demo");
+  }
+
+  const { businessId, exceptionId } = parsed.data;
+  const supabase = await createSupabaseRouteClient();
+  await ensureAssignedAnalystBusiness(supabase, profile.id, businessId);
+  const exception = await fetchExceptionForAction(supabase, businessId, exceptionId);
+
+  if (!exception || !canMoveExceptionStatus("analyst", exception.status, "in_review")) {
+    redirect("/dashboard/analyst?action=invalid-transition");
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("control_exceptions")
+    .update({ status: "in_review", assigned_to: profile.id })
+    .eq("id", exceptionId)
+    .eq("business_id", businessId);
+
+  if (error) {
+    redirect(`/dashboard/analyst?action=${encodeURIComponent(error.message)}`);
+  }
+
+  await writeAuditEvent({
+    businessId,
+    actorUserId: profile.id,
+    eventType: "analyst_started_exception_review",
+    entityType: "control_exception",
+    entityId: exceptionId,
+    metadata: { previous_status: exception.status, next_status: "in_review" }
+  });
+
+  revalidateAnalystPaths();
+  redirect("/dashboard/analyst?action=exception-in-review");
+}
+
+export async function requestExceptionClarification(formData: FormData) {
+  const profile = await requireRole(["analyst"]);
+  const parsed = exceptionActionSchema.safeParse({
+    businessId: formData.get("businessId"),
+    exceptionId: formData.get("exceptionId"),
+    body: formData.get("body")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/analyst?action=invalid");
+  }
+
+  if (!hasSupabaseConfig() || !hasSupabaseServiceConfig()) {
+    redirect("/dashboard/analyst?action=demo");
+  }
+
+  const { businessId, exceptionId, body } = parsed.data;
+  const supabase = await createSupabaseRouteClient();
+  await ensureAssignedAnalystBusiness(supabase, profile.id, businessId);
+  const exception = await fetchExceptionForAction(supabase, businessId, exceptionId);
+
+  if (!exception || !canRequestExceptionClarification("analyst", exception)) {
+    redirect("/dashboard/analyst?action=invalid-transition");
+  }
+
+  const { data: note, error } = await supabase
+    .from("analyst_notes")
+    .insert({
+      business_id: businessId,
+      analyst_user_id: profile.id,
+      note_type: "clarification_request",
+      body: `IC exception - ${exception.title}: ${body}`,
+      visibility: "business_visible"
+    })
+    .select("id")
+    .single();
+
+  if (error || !note) {
+    redirect(`/dashboard/analyst?action=${encodeURIComponent(error?.message ?? "failed")}`);
+  }
+
+  if (exception.status === "open") {
+    await createSupabaseAdminClient()
+      .from("control_exceptions")
+      .update({ status: "in_review", assigned_to: profile.id })
+      .eq("id", exceptionId)
+      .eq("business_id", businessId);
+  }
+
+  await writeAuditEvent({
+    businessId,
+    actorUserId: profile.id,
+    eventType: "analyst_requested_exception_clarification",
+    entityType: "control_exception",
+    entityId: exceptionId,
+    metadata: { note_id: note.id, previous_status: exception.status, next_status: "in_review" }
+  });
+
+  revalidateAnalystPaths();
+  redirect("/dashboard/analyst?action=exception-clarification-requested");
+}
+
+export async function escalateException(formData: FormData) {
+  const profile = await requireRole(["analyst"]);
+  const parsed = exceptionActionSchema.safeParse({
+    businessId: formData.get("businessId"),
+    exceptionId: formData.get("exceptionId"),
+    body: formData.get("body")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/analyst?action=invalid");
+  }
+
+  if (!hasSupabaseConfig() || !hasSupabaseServiceConfig()) {
+    redirect("/dashboard/analyst?action=demo");
+  }
+
+  const { businessId, exceptionId, body } = parsed.data;
+  const supabase = await createSupabaseRouteClient();
+  await ensureAssignedAnalystBusiness(supabase, profile.id, businessId);
+  const exception = await fetchExceptionForAction(supabase, businessId, exceptionId);
+
+  if (!exception || !canEscalateException("analyst", exception)) {
+    redirect("/dashboard/analyst?action=invalid-transition");
+  }
+
+  const { data: superAdmin } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("platform_role", "super_admin")
+    .limit(1)
+    .single();
+
+  if (!superAdmin) {
+    redirect("/dashboard/analyst?action=no-super-admin");
+  }
+
+  const { data: escalation, error } = await supabase
+    .from("analyst_escalations")
+    .insert({
+      business_id: businessId,
+      analyst_user_id: profile.id,
+      escalated_to: superAdmin.id,
+      risk_level: exception.riskLevel,
+      reason: `IC exception - ${exception.title}: ${body}`,
+      status: "open"
+    })
+    .select("id")
+    .single();
+
+  if (error || !escalation) {
+    redirect(`/dashboard/analyst?action=${encodeURIComponent(error?.message ?? "failed")}`);
+  }
+
+  if (exception.status === "open") {
+    await createSupabaseAdminClient()
+      .from("control_exceptions")
+      .update({ status: "in_review", assigned_to: profile.id })
+      .eq("id", exceptionId)
+      .eq("business_id", businessId);
+  }
+
+  await writeAuditEvent({
+    businessId,
+    actorUserId: profile.id,
+    eventType: "analyst_escalated_exception",
+    entityType: "control_exception",
+    entityId: exceptionId,
+    metadata: {
+      escalation_id: escalation.id,
+      risk_level: exception.riskLevel,
+      previous_status: exception.status,
+      next_status: "in_review"
+    }
+  });
+
+  revalidateAnalystPaths();
+  redirect("/dashboard/analyst?action=exception-escalated");
 }
 
 export async function markReportReviewReady(formData: FormData) {
@@ -82,6 +284,49 @@ export async function markReportReviewReady(formData: FormData) {
 
   revalidateAnalystPaths();
   redirect("/dashboard/analyst?action=review-ready");
+}
+
+async function ensureAssignedAnalystBusiness(
+  supabase: Awaited<ReturnType<typeof createSupabaseRouteClient>>,
+  analystId: string,
+  businessId: string
+) {
+  const { data } = await supabase
+    .from("analyst_assignments")
+    .select("id")
+    .eq("analyst_user_id", analystId)
+    .eq("business_id", businessId)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    redirect("/dashboard/analyst?action=not-assigned");
+  }
+}
+
+async function fetchExceptionForAction(
+  supabase: Awaited<ReturnType<typeof createSupabaseRouteClient>>,
+  businessId: string,
+  exceptionId: string
+): Promise<ControlException | null> {
+  const { data } = await supabase
+    .from("control_exceptions")
+    .select("id, business_id, title, risk_level, status, created_at")
+    .eq("id", exceptionId)
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    businessId: data.business_id,
+    title: data.title,
+    riskLevel: data.risk_level,
+    status: data.status,
+    daysOpen: 0
+  };
 }
 
 export async function escalateIssue(formData: FormData) {
@@ -214,4 +459,5 @@ async function writeAuditEvent(input: {
 function revalidateAnalystPaths() {
   revalidatePath("/dashboard/analyst");
   revalidatePath("/dashboard/super-admin");
+  revalidatePath("/dashboard/ceo");
 }

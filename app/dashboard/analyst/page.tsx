@@ -3,13 +3,17 @@ import { IcActionTable } from "@/components/dashboard/ic-action-table";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   addInternalNote,
+  escalateException,
   escalateIssue,
+  markExceptionInReview,
   markReportReviewReady,
+  requestExceptionClarification,
   requestClarification
 } from "@/app/dashboard/analyst/actions";
 import { getBusinessReadiness } from "@/lib/analyst/readiness";
 import { ANALYST_BUSINESS_CAPACITY } from "@/lib/analyst/workload";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getAssignedOpenExceptions, getAvailableExceptionActions } from "@/lib/ic-engine/actions";
 import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
 type AnalystDashboardProps = {
@@ -37,6 +41,9 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
   const icActionQueue = getBusinessesNeedingIcAction(icActions);
   const assignedReports = departmentReports.filter((report) => assignedBusinessIds.has(report.businessId));
   const submittedReports = assignedReports.filter((report) => report.status === "submitted");
+  const assignedExceptions = currentAnalystId
+    ? getAssignedOpenExceptions(controlExceptions, analystAssignments, currentAnalystId)
+    : [];
 
   return (
     <div className="stack">
@@ -62,6 +69,54 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
       <section className="card">
         <h2>IC review queue</h2>
         <IcActionTable rows={icActionQueue} />
+      </section>
+
+      <section className="card">
+        <h2>Exception action queue</h2>
+        <p>
+          Analyst actions move exceptions into review, request clarification, or escalate high-risk issues. Resolution
+          remains CEO-owned.
+        </p>
+        <ul className="list">
+          {assignedExceptions.map((exception) => {
+            const business = businesses.find((item) => item.id === exception.businessId);
+            const actions = getAvailableExceptionActions("analyst", exception);
+
+            return (
+              <li key={exception.id}>
+                <strong>{business?.legalName ?? "Business"} - {exception.title}</strong>
+                <br />
+                {exception.riskLevel} risk, {exception.status}, open {exception.daysOpen} days
+                <div className="grid grid-3 action-grid">
+                  <form action={markExceptionInReview} className="compact-form">
+                    <input type="hidden" name="businessId" value={exception.businessId} />
+                    <input type="hidden" name="exceptionId" value={exception.id} />
+                    <button className="button" type="submit" disabled={!actions.includes("start_review")}>
+                      Start review
+                    </button>
+                  </form>
+                  <form action={requestExceptionClarification} className="form compact-form">
+                    <input type="hidden" name="businessId" value={exception.businessId} />
+                    <input type="hidden" name="exceptionId" value={exception.id} />
+                    <textarea name="body" required minLength={3} maxLength={2000} placeholder="Request clarification." />
+                    <button className="button" type="submit" disabled={!actions.includes("request_clarification")}>
+                      Request clarification
+                    </button>
+                  </form>
+                  <form action={escalateException} className="form compact-form">
+                    <input type="hidden" name="businessId" value={exception.businessId} />
+                    <input type="hidden" name="exceptionId" value={exception.id} />
+                    <textarea name="body" required minLength={3} maxLength={2000} placeholder="Escalation reason." />
+                    <button className="button" type="submit" disabled={!actions.includes("escalate")}>
+                      Escalate
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })}
+          {assignedExceptions.length === 0 ? <li>No open assigned exceptions.</li> : null}
+        </ul>
       </section>
 
       <section className="card">
@@ -167,8 +222,13 @@ function getActionMessage(status: string) {
   if (status === "clarification-requested") return "Clarification request added and audited.";
   if (status === "review-ready") return "Report marked review-ready and audited.";
   if (status === "escalated") return "Issue escalated to Super Admin and audited.";
+  if (status === "exception-in-review") return "Exception moved to Analyst review and audited.";
+  if (status === "exception-clarification-requested") return "Exception clarification requested and review status updated.";
+  if (status === "exception-escalated") return "Exception escalated to Super Admin and review status updated.";
   if (status === "demo") return "Demo mode: connect Supabase to persist Analyst actions.";
   if (status === "invalid") return "Complete the required fields before submitting.";
+  if (status === "invalid-transition") return "That exception lifecycle movement is not allowed for this role.";
+  if (status === "not-assigned") return "Analysts can act only on assigned businesses.";
   if (status === "no-super-admin") return "No Super Admin profile exists for escalation routing.";
   return `Action failed: ${status}`;
 }

@@ -2,6 +2,7 @@ import { getSupabaseBrowserConfig, hasSupabaseConfig } from "@/lib/supabase/conf
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import {
   analystAssignments,
+  analystEscalations,
   analystNotes,
   analysts,
   businesses,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/data/sample-data";
 import {
   mapAnalyst,
+  mapAnalystEscalation,
   mapAnalystNote,
   mapAssignment,
   mapBusiness,
@@ -44,6 +46,7 @@ export async function getPlatformSnapshot() {
       controlExceptions,
       departmentReports,
       analystNotes,
+      analystEscalations,
       ceoResponses,
       institutionAccess,
       departments,
@@ -67,6 +70,7 @@ export async function getPlatformSnapshot() {
     exceptionResult,
     reportResult,
     noteResult,
+    escalationResult,
     responseResult,
     accessResult,
     departmentResult,
@@ -85,6 +89,10 @@ export async function getPlatformSnapshot() {
     supabase
       .from("analyst_notes")
       .select("id, business_id, analyst_user_id, note_type, body, visibility, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("analyst_escalations")
+      .select("id, business_id, analyst_user_id, escalated_to, risk_level, reason, status, created_at")
       .order("created_at", { ascending: false }),
     supabase
       .from("ceo_responses")
@@ -118,6 +126,7 @@ export async function getPlatformSnapshot() {
   assertNoSupabaseError(exceptionResult.error);
   assertNoSupabaseError(reportResult.error);
   assertNoSupabaseError(noteResult.error);
+  assertNoSupabaseError(escalationResult.error);
   assertNoSupabaseError(responseResult.error);
   assertNoSupabaseError(accessResult.error);
   assertNoSupabaseError(departmentResult.error);
@@ -135,6 +144,7 @@ export async function getPlatformSnapshot() {
     controlExceptions: (exceptionResult.data ?? []).map(mapControlException),
     departmentReports: (reportResult.data ?? []).map(mapDepartmentReport),
     analystNotes: (noteResult.data ?? []).map(mapAnalystNote),
+    analystEscalations: (escalationResult.data ?? []).map(mapAnalystEscalation),
     ceoResponses: (responseResult.data ?? []).map(mapCeoResponse),
     institutionAccess: (accessResult.data ?? []).map(mapInstitutionAccess),
     departments: (departmentResult.data ?? []).map(mapDepartment),

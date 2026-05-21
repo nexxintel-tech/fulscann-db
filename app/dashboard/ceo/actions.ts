@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { canMoveExceptionStatus } from "@/lib/ic-engine/actions";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
+import type { ExceptionStatus } from "@/lib/types";
 
 const responseSchema = z.object({
   businessId: z.string().min(1),
@@ -89,6 +91,18 @@ export async function resolveException(formData: FormData) {
 
   const { businessId, linkedEntityId, body } = parsed.data;
   const supabase = await createSupabaseRouteClient();
+
+  const { data: exception } = await supabase
+    .from("control_exceptions")
+    .select("status")
+    .eq("id", linkedEntityId)
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (!exception || !canMoveExceptionStatus("ceo", exception.status as ExceptionStatus, "resolved")) {
+    redirect("/dashboard/ceo?action=invalid-transition");
+  }
+
   const { data: response, error: responseError } = await supabase
     .from("ceo_responses")
     .insert({
@@ -122,7 +136,7 @@ export async function resolveException(formData: FormData) {
     eventType: "ceo_resolved_exception",
     entityType: "control_exception",
     entityId: linkedEntityId,
-    metadata: { response_id: response.id }
+    metadata: { response_id: response.id, previous_status: exception.status, next_status: "resolved" }
   });
 
   revalidateCeoPaths();
