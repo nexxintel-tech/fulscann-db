@@ -102,6 +102,32 @@ npm run supabase:verify
 
 This checks that `.env.local` can reach the Supabase project with the service role, confirms core tables are readable, and confirms the `evidence-files` bucket exists and is private. The command prints counts/status only, not secrets.
 
+## Verify Secure RLS Workflow
+
+After real Auth users and live workflow records exist, run the anon-key RLS verifier. This signs in as real users and checks what each role can see through RLS. It does not print passwords or use the service role for role checks.
+
+```powershell
+$env:FULSCANN_TEST_USERS='{
+  "superAdmin":{"email":"admin@yourdomain.com","password":"ChangeThisAdminPassword1!"},
+  "analyst":{"email":"analyst@yourdomain.com","password":"ChangeThisAnalystPassword1!"},
+  "ceo":{"email":"ceo@yourbusiness.com","password":"ChangeThisCeoPassword1!"},
+  "staff":{"email":"staff@yourbusiness.com","password":"ChangeThisStaffPassword1!"},
+  "institution":{"email":"credit@example.com","password":"ChangeThisInstitutionPassword1!"}
+}'
+npm run supabase:verify-secure
+Remove-Item Env:FULSCANN_TEST_USERS
+```
+
+Expected prerequisites:
+
+- every Auth user has a matching `profiles.id`
+- CEO has at least one business
+- staff user has accepted an invitation and has an active `business_users` row
+- Analyst has at least one active assignment
+- Institution user has an active CEO-granted `institution_access` row using the same email as the Auth user
+
+If any prerequisite is missing, the verifier fails with the missing workflow state instead of bypassing RLS.
+
 ## First Secure Workflow Test
 
 1. Sign in as a CEO.
@@ -114,6 +140,8 @@ This checks that `.env.local` can reach the Supabase project with the service ro
 8. Attach an evidence file.
 9. Sign in as CEO and verify the report/evidence.
 10. Sign in as Analyst and verify assigned-business read access without CEO-level mutation rights.
+11. Sign in as Institution user and verify only CEO-granted approved reports are visible.
+12. Run `npm run supabase:verify-secure` with the same test users.
 
 ## GitHub Secrets
 

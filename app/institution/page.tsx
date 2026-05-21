@@ -1,8 +1,8 @@
 import { StatCard } from "@/components/ui/stat-card";
-import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getInstitutionSnapshot } from "@/lib/data/repository";
 
 export default async function InstitutionDashboard() {
-  const { businesses, controlExceptions } = await getPlatformSnapshot();
+  const { businesses, controlExceptions, institutionAccess } = await getInstitutionSnapshot();
   const approvedBusinesses = businesses.filter((business) => business.integrityReportReady);
 
   return (
@@ -18,7 +18,7 @@ export default async function InstitutionDashboard() {
       <section className="grid grid-3">
         <StatCard label="Approved businesses" value={approvedBusinesses.length} detail="Consent-based access" />
         <StatCard label="Open risk flags" value={controlExceptions.filter((exception) => exception.status !== "resolved").length} detail="Portfolio review queue" />
-        <StatCard label="Reports available" value={approvedBusinesses.length} detail="Integrity Reports" />
+        <StatCard label="Reports available" value={institutionAccess.length} detail="Integrity Reports" />
       </section>
 
       <section className="card">

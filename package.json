@@ -8,6 +8,7 @@
     "build": "next build",
     "supabase:bootstrap-auth": "node scripts/bootstrap-auth-users.mjs",
     "supabase:verify": "node scripts/verify-supabase.mjs",
+    "supabase:verify-secure": "node scripts/verify-secure-workflow.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

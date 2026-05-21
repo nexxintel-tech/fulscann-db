@@ -158,6 +158,50 @@ export async function getPlatformSnapshot() {
   };
 }
 
+export async function getInstitutionSnapshot() {
+  if (!hasSupabaseConfig()) {
+    return {
+      businesses: businesses.filter((business) => business.integrityReportReady),
+      controlExceptions: controlExceptions.filter((exception) =>
+        businesses.some((business) => business.id === exception.businessId && business.integrityReportReady)
+      ),
+      institutionAccess,
+      source: "sample" as const
+    };
+  }
+
+  getSupabaseBrowserConfig();
+  const supabase = await createSupabaseRouteClient();
+
+  const [businessResult, exceptionResult, accessResult] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select("*")
+      .eq("integrity_report_ready", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("control_exceptions")
+      .select("id, business_id, title, risk_level, status, created_at")
+      .neq("status", "resolved"),
+    supabase
+      .from("institution_access")
+      .select("id, business_id, institution_name, institution_email, status, created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+  ]);
+
+  assertNoSupabaseError(businessResult.error);
+  assertNoSupabaseError(exceptionResult.error);
+  assertNoSupabaseError(accessResult.error);
+
+  return {
+    businesses: (businessResult.data ?? []).map(mapBusiness),
+    controlExceptions: (exceptionResult.data ?? []).map(mapControlException),
+    institutionAccess: (accessResult.data ?? []).map(mapInstitutionAccess),
+    source: "supabase" as const
+  };
+}
+
 async function withSignedEvidenceUrls(evidenceFiles: ReturnType<typeof mapEvidenceFile>[]) {
   const supabase = await createSupabaseRouteClient();
 
