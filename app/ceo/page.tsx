@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { IcActionTable } from "@/components/dashboard/ic-action-table";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { StatCard } from "@/components/ui/stat-card";
 import { getOpenExceptions } from "@/lib/ceo/actions";
 import { getDemoSnapshot } from "@/lib/data/demo-snapshot";
+import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
 export default function DemoCeoPage() {
   const { businesses, controlExceptions, departmentReports, evidenceFiles, icScoreResults } = getDemoSnapshot();
@@ -10,6 +12,7 @@ export default function DemoCeoPage() {
   const reports = departmentReports.filter((report) => report.businessId === business.id);
   const openExceptions = getOpenExceptions(controlExceptions, business.id);
   const latestIcScore = icScoreResults.find((score) => score.businessId === business.id);
+  const icActionQueue = getBusinessesNeedingIcAction(getIcBusinessActions([business], controlExceptions, icScoreResults));
 
   return (
     <div className="stack">
@@ -26,6 +29,12 @@ export default function DemoCeoPage() {
         <StatCard label="VeriScore" value={business.currentVeriScore} detail="Business maturity signal" />
         <StatCard label="IC Score" value={latestIcScore?.score ?? business.currentIcScore} detail="Internal control signal" />
         <StatCard label="Open exceptions" value={openExceptions.length} detail="CEO-owned resolution queue" />
+        <StatCard label="IC actions" value={icActionQueue.length} detail="Control issues needing action" />
+      </section>
+
+      <section className="card">
+        <h2>IC action queue</h2>
+        <IcActionTable rows={icActionQueue} />
       </section>
 
       <section className="card">

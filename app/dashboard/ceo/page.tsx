@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IcActionTable } from "@/components/dashboard/ic-action-table";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   respondToClarification,
@@ -13,6 +14,7 @@ import {
   getOpenExceptions
 } from "@/lib/ceo/actions";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
 type CeoDashboardProps = {
   searchParams: Promise<{ action?: string }>;
@@ -44,6 +46,8 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
   const responseCount = ceoResponses.filter((response) => response.businessId === business.id).length;
   const reportCanBeShared = canShareIntegrityReport(business.integrityReportReady);
   const latestIcScore = icScoreResults.find((score) => score.businessId === business.id);
+  const icActions = getIcBusinessActions([business], controlExceptions, icScoreResults);
+  const icActionQueue = getBusinessesNeedingIcAction(icActions);
 
   return (
     <div className="stack">
@@ -66,6 +70,12 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
         <StatCard label="VeriScore" value={business.currentVeriScore} detail="Business maturity signal" />
         <StatCard label="IC Score" value={business.currentIcScore} detail="Internal control signal" />
         <StatCard label="Evidence completion" value={`${business.evidenceCompletion}%`} detail="Report support level" />
+        <StatCard label="IC actions" value={icActionQueue.length} detail="Control issues needing CEO action" />
+      </section>
+
+      <section className="card">
+        <h2>IC action queue</h2>
+        <IcActionTable rows={icActionQueue} />
       </section>
 
       <section className="grid grid-2">

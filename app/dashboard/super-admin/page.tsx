@@ -1,7 +1,9 @@
 import { StatCard } from "@/components/ui/stat-card";
+import { IcActionTable } from "@/components/dashboard/ic-action-table";
 import { assignBusinessToAnalyst } from "@/app/dashboard/super-admin/actions";
 import { getAnalystWorkloads, getAssignableAnalysts, getUnassignedBusinesses } from "@/lib/analyst/workload";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getBusinessesNeedingIcAction, getIcBusinessActions, getIcRiskDistribution } from "@/lib/ic-engine/dashboard";
 
 type SuperAdminDashboardProps = {
   searchParams: Promise<{ assignment?: string }>;
@@ -9,13 +11,16 @@ type SuperAdminDashboardProps = {
 
 export default async function SuperAdminDashboard({ searchParams }: SuperAdminDashboardProps) {
   const params = await searchParams;
-  const { businesses, analysts, analystAssignments, controlExceptions } = await getPlatformSnapshot();
+  const { businesses, analysts, analystAssignments, controlExceptions, icScoreResults } = await getPlatformSnapshot();
   const workloads = getAnalystWorkloads(analysts, analystAssignments);
   const unassignedBusinesses = getUnassignedBusinesses(businesses, analystAssignments);
   const assignableAnalysts = getAssignableAnalysts(analysts, analystAssignments);
   const unassignedCount = unassignedBusinesses.length;
   const escalatedCases = controlExceptions.filter((exception) => exception.riskLevel === "Red").length;
   const reportPipeline = businesses.filter((business) => business.integrityReportReady).length;
+  const icActions = getIcBusinessActions(businesses, controlExceptions, icScoreResults);
+  const icActionQueue = getBusinessesNeedingIcAction(icActions);
+  const riskDistribution = getIcRiskDistribution(controlExceptions);
 
   return (
     <div className="stack">
@@ -31,6 +36,12 @@ export default async function SuperAdminDashboard({ searchParams }: SuperAdminDa
         <StatCard label="Analysts" value={analysts.length} detail="Active internal reviewers" />
         <StatCard label="Businesses without analysts" value={unassignedCount} detail="Assignment coverage gap" />
         <StatCard label="Escalated cases" value={escalatedCases} detail="High-risk issues needing review" />
+        <StatCard label="IC action queue" value={icActionQueue.length} detail="Businesses needing control review" />
+      </section>
+
+      <section className="card">
+        <h2>Platform IC action queue</h2>
+        <IcActionTable rows={icActionQueue} />
       </section>
 
       <section className="card">
@@ -100,8 +111,8 @@ export default async function SuperAdminDashboard({ searchParams }: SuperAdminDa
           <h2>Platform IC risk distribution</h2>
           <p>
             {controlExceptions.filter((exception) => exception.riskLevel === "Red").length} red,{" "}
-            {controlExceptions.filter((exception) => exception.riskLevel === "Orange").length} orange,{" "}
-            {controlExceptions.filter((exception) => exception.riskLevel === "Yellow").length} yellow exceptions.
+            {riskDistribution.orange} orange,{" "}
+            {riskDistribution.yellow} yellow exceptions.
           </p>
         </article>
         <article className="card">

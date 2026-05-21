@@ -1,4 +1,5 @@
 import { BusinessTable } from "@/components/dashboard/business-table";
+import { IcActionTable } from "@/components/dashboard/ic-action-table";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   addInternalNote,
@@ -9,6 +10,7 @@ import {
 import { getBusinessReadiness } from "@/lib/analyst/readiness";
 import { ANALYST_BUSINESS_CAPACITY } from "@/lib/analyst/workload";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
 type AnalystDashboardProps = {
   searchParams: Promise<{ action?: string }>;
@@ -31,6 +33,8 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
   const decliningIcCount = readiness.filter((row) => row.decliningIcScore).length;
   const inactiveCount = readiness.filter((row) => row.inactive).length;
   const automatedScoreCount = icScoreResults.filter((score) => assignedBusinessIds.has(score.businessId)).length;
+  const icActions = getIcBusinessActions(assignedBusinesses, controlExceptions, icScoreResults);
+  const icActionQueue = getBusinessesNeedingIcAction(icActions);
   const assignedReports = departmentReports.filter((report) => assignedBusinessIds.has(report.businessId));
   const submittedReports = assignedReports.filter((report) => report.status === "submitted");
 
@@ -52,6 +56,12 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
         <StatCard label="Declining IC Score" value={decliningIcCount} detail="Control movement risk" />
         <StatCard label="Inactive businesses" value={inactiveCount} detail="No recent activity" />
         <StatCard label="Automated IC scores" value={automatedScoreCount} detail="Recalculated from report checks" />
+        <StatCard label="IC actions" value={icActionQueue.length} detail="Assigned businesses needing review" />
+      </section>
+
+      <section className="card">
+        <h2>IC review queue</h2>
+        <IcActionTable rows={icActionQueue} />
       </section>
 
       <section className="card">
