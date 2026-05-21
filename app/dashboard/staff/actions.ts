@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { buildEvidenceStoragePath, EVIDENCE_BUCKET, validateEvidenceUpload } from "@/lib/evidence/storage";
-import { runSalesFinanceAutomation } from "@/lib/ic-engine/automation";
+import { runBusinessIcAutomation } from "@/lib/ic-engine/automation";
+import { buildIcPersistencePlan } from "@/lib/ic-engine/persistence";
 import type { ControlException, DepartmentReport, EvidenceFile } from "@/lib/types";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { createSupabaseRouteClient } from "@/lib/supabase/server";
+import { hasSupabaseConfig, hasSupabaseServiceConfig } from "@/lib/supabase/config";
+import { createSupabaseAdminClient, createSupabaseRouteClient } from "@/lib/supabase/server";
 
 const reportSchema = z.object({
   businessId: z.string().min(1),
@@ -143,7 +144,7 @@ export async function attachEvidenceToReport(formData: FormData) {
     metadata: { report_id: reportId, evidence_level: evidenceLevel, file_type: fileType, storage_path: storagePath }
   });
 
-  if (linkedReport?.department === "sales" || linkedReport?.department === "finance") {
+  if (linkedReport?.department) {
     await runIcAutomationAfterReport({
       businessId,
       actorUserId: profile.id,
@@ -162,17 +163,16 @@ async function runIcAutomationAfterReport(input: {
   actorUserId: string;
   department: "sales" | "finance" | "procurement" | "operations" | "hr";
 }) {
-  if (input.department !== "sales" && input.department !== "finance") {
+  if (!hasSupabaseServiceConfig()) {
     return;
   }
 
-  const supabase = await createSupabaseRouteClient();
+  const supabase = createSupabaseAdminClient();
   const [reportResult, exceptionResult, evidenceResult, businessResult] = await Promise.all([
     supabase
       .from("department_reports")
       .select("id, business_id, department, status, value, evidence_count")
       .eq("business_id", input.businessId)
-      .in("department", ["sales", "finance"])
       .order("created_at", { ascending: true }),
     supabase
       .from("control_exceptions")
@@ -223,25 +223,22 @@ async function runIcAutomationAfterReport(input: {
     signedUrl: null,
     createdAt: row.created_at
   }));
-  const result = runSalesFinanceAutomation({
+  const result = runBusinessIcAutomation({
     reports,
     existingExceptions: exceptions,
     evidenceCompletion: businessResult.data?.evidence_completion ?? 0,
     evidenceFiles
   });
+  const plan = buildIcPersistencePlan(result);
 
-  if (!result) {
-    return;
-  }
-
-  if (result.shouldCreateException && result.exception) {
+  for (const candidate of plan.exceptionCandidatesToCreate) {
     const { data: createdException } = await supabase
       .from("control_exceptions")
       .insert({
         business_id: input.businessId,
-        title: result.exception.title,
-        description: result.exception.description,
-        risk_level: result.exception.riskLevel,
+        title: candidate.title,
+        description: candidate.description,
+        risk_level: candidate.riskLevel,
         status: "open"
       })
       .select("id")
@@ -254,9 +251,25 @@ async function runIcAutomationAfterReport(input: {
         event_type: "ic_engine_created_exception",
         entity_type: "control_exception",
         entity_id: createdException.id,
-        metadata: result.exception
+        metadata: candidate
       });
     }
+  }
+
+  for (const suppressed of plan.suppressedExceptionCandidates) {
+    await supabase.from("audit_events").insert({
+      business_id: input.businessId,
+      actor_user_id: input.actorUserId,
+      event_type: "ic_engine_suppressed_exception_candidate",
+      entity_type: "business",
+      entity_id: input.businessId,
+      metadata: {
+        title: suppressed.candidate.title,
+        risk_level: suppressed.candidate.riskLevel,
+        lifecycle_state: suppressed.state,
+        existing_exception_id: suppressed.existingExceptionId ?? null
+      }
+    });
   }
 
   const { data: score } = await supabase
@@ -274,7 +287,9 @@ async function runIcAutomationAfterReport(input: {
     .from("businesses")
     .update({
       previous_ic_score: businessResult.data?.current_ic_score ?? result.icScore,
-      current_ic_score: result.icScore
+      current_ic_score: result.icScore,
+      evidence_completion: result.scoreFactors.evidenceCompleteness,
+      last_activity_at: new Date().toISOString()
     })
     .eq("id", input.businessId);
 
@@ -285,7 +300,7 @@ async function runIcAutomationAfterReport(input: {
       event_type: "ic_score_recalculated",
       entity_type: "ic_score",
       entity_id: score.id,
-      metadata: { score: result.icScore, matched: result.matched }
+      metadata: plan.auditMetadata
     });
   }
 }
