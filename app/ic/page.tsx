@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { StatCard } from "@/components/ui/stat-card";
-import { runSalesFinanceAutomation } from "@/lib/ic-engine/automation";
+import { runBusinessIcAutomation } from "@/lib/ic-engine/automation";
 import { getDemoSnapshot } from "@/lib/data/demo-snapshot";
 
 type IcDemoPageProps = {
@@ -21,10 +21,17 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
   const { departmentReports, controlExceptions } = getDemoSnapshot();
   const reports = [
     { ...departmentReports[0], id: "demo_sales", value: salesValue, department: "sales" as const },
-    { ...departmentReports[1], id: "demo_finance", value: financeValue, department: "finance" as const }
+    { ...departmentReports[1], id: "demo_finance", value: financeValue, department: "finance" as const },
+    {
+      ...departmentReports[0],
+      id: "demo_procurement",
+      value: 750_000,
+      department: "procurement" as const,
+      evidenceCount: 0
+    }
   ];
   const existingExceptions = params.duplicate === "1" ? controlExceptions : [];
-  const result = runSalesFinanceAutomation({
+  const result = runBusinessIcAutomation({
     reports,
     existingExceptions,
     evidenceCompletion
@@ -35,7 +42,7 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
       <DemoBanner role="IC mechanism" />
       <section className="page-title">
         <h1>IC mechanism test</h1>
-        <p>Run the sales-finance internal control check without authentication or database writes.</p>
+        <p>Run internal control checks without authentication or database writes.</p>
       </section>
 
       <section className="grid grid-3">
@@ -74,20 +81,65 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
       {result ? (
         <>
           <section className="grid grid-3">
-            <StatCard label="Matched" value={result.matched ? "Yes" : "No"} detail="Sales vs finance tolerance" />
-            <StatCard label="Create exception" value={result.shouldCreateException ? "Yes" : "No"} detail="Duplicate-safe exception rule" />
+            <StatCard label="Checks run" value={result.checks.length} detail="Rule-level IC tests" />
+            <StatCard label="New exceptions" value={result.newExceptionCandidates.length} detail="Duplicate-safe exception candidates" />
             <StatCard label="IC Score" value={result.icScore} detail="Calculated control score" />
           </section>
 
           <section className="card">
-            <h2>IC result</h2>
-            {result.exception ? (
-              <p>
-                {result.exception.riskLevel} risk: {result.exception.description}
-              </p>
-            ) : (
-              <p>No exception generated. Reports are within tolerance.</p>
-            )}
+            <h2>Rule results</h2>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Rule</th>
+                  <th>Status</th>
+                  <th>Risk</th>
+                  <th>Finding</th>
+                  <th>Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.checks.map((check) => (
+                  <tr key={check.id}>
+                    <td>{check.title}</td>
+                    <td>{check.status}</td>
+                    <td>{check.riskLevel}</td>
+                    <td>{check.description}</td>
+                    <td>{check.scoreImpact}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="grid grid-2">
+            <article className="card">
+              <h2>Score factors</h2>
+              <table className="table">
+                <tbody>
+                  {Object.entries(result.scoreFactors).map(([factor, value]) => (
+                    <tr key={factor}>
+                      <td>{formatFactor(factor)}</td>
+                      <td>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </article>
+
+            <article className="card">
+              <h2>Exception candidates</h2>
+              <ul className="list">
+                {result.newExceptionCandidates.map((exception) => (
+                  <li key={exception.title}>
+                    <strong>{exception.riskLevel}: {exception.title}</strong>
+                    <br />
+                    {exception.description}
+                  </li>
+                ))}
+                {result.newExceptionCandidates.length === 0 ? <li>No new exception candidates.</li> : null}
+              </ul>
+            </article>
           </section>
         </>
       ) : (
@@ -103,4 +155,8 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
 function toNumber(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function formatFactor(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`);
 }

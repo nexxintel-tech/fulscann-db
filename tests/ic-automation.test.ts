@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { runSalesFinanceAutomation } from "@/lib/ic-engine/automation";
-import type { DepartmentReport } from "@/lib/types";
+import { runBusinessIcAutomation, runSalesFinanceAutomation } from "@/lib/ic-engine/automation";
+import type { DepartmentReport, EvidenceFile } from "@/lib/types";
 
 const baseReports: DepartmentReport[] = [
   {
@@ -18,6 +18,37 @@ const baseReports: DepartmentReport[] = [
     status: "submitted",
     value: 1_200_000,
     evidenceCount: 2
+  }
+];
+
+const baseEvidence: EvidenceFile[] = [
+  {
+    id: "ev_sales",
+    businessId: "biz_1",
+    reportId: "sales_1",
+    uploadedBy: "user_1",
+    fileName: "sales-invoices.pdf",
+    fileType: "invoice",
+    storagePath: "biz_1/sales_1/sales-invoices.pdf",
+    fileSize: 100,
+    evidenceLevel: 2,
+    verificationStatus: "pending",
+    signedUrl: null,
+    createdAt: "2026-05-18T00:00:00.000Z"
+  },
+  {
+    id: "ev_finance",
+    businessId: "biz_1",
+    reportId: "finance_1",
+    uploadedBy: "user_1",
+    fileName: "bank-statement.pdf",
+    fileType: "bank_statement",
+    storagePath: "biz_1/finance_1/bank-statement.pdf",
+    fileSize: 100,
+    evidenceLevel: 2,
+    verificationStatus: "pending",
+    signedUrl: null,
+    createdAt: "2026-05-18T00:00:00.000Z"
   }
 ];
 
@@ -93,5 +124,51 @@ describe("IC automation", () => {
 
     expect(result?.matched).toBe(true);
     expect(result?.icScore).toBeLessThan(80);
+  });
+
+  it("runs a business-level IC automation with rule results and exception candidates", () => {
+    const result = runBusinessIcAutomation({
+      reports: [
+        ...baseReports,
+        {
+          id: "procurement_1",
+          businessId: "biz_1",
+          department: "procurement",
+          status: "submitted",
+          value: 500_000,
+          evidenceCount: 0
+        }
+      ],
+      existingExceptions: [],
+      evidenceCompletion: 70,
+      evidenceFiles: baseEvidence
+    });
+
+    expect(result.checks.length).toBeGreaterThan(4);
+    expect(result.newExceptionCandidates.map((exception) => exception.title)).toContain("Sales-finance mismatch");
+    expect(result.newExceptionCandidates.map((exception) => exception.title)).toContain("Procurement evidence missing");
+    expect(result.newExceptionCandidates.map((exception) => exception.title)).toContain("Procurement approval gap");
+    expect(result.icScore).toBeLessThan(75);
+  });
+
+  it("does not return duplicate open exception candidates", () => {
+    const result = runBusinessIcAutomation({
+      reports: baseReports,
+      existingExceptions: [
+        {
+          id: "exc_1",
+          businessId: "biz_1",
+          title: "Sales-finance mismatch",
+          riskLevel: "Red",
+          status: "open",
+          daysOpen: 1
+        }
+      ],
+      evidenceCompletion: 70,
+      evidenceFiles: baseEvidence
+    });
+
+    expect(result.exceptionCandidates.map((exception) => exception.title)).toContain("Sales-finance mismatch");
+    expect(result.newExceptionCandidates.map((exception) => exception.title)).not.toContain("Sales-finance mismatch");
   });
 });
