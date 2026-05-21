@@ -159,8 +159,25 @@ console.log(`WROTE local test credentials to ${credentialPath}`);
 console.log("Set FULSCANN_TEST_USERS from that file or run npm run supabase:verify-secure directly.");
 
 function loadOrCreateCredentials() {
+  const defaultPassword = process.env.FULSCANN_DEFAULT_TEST_PASSWORD?.trim();
+
   if (existsSync(credentialPath)) {
-    return JSON.parse(readFileSync(credentialPath, "utf8"));
+    const existing = JSON.parse(readFileSync(credentialPath, "utf8"));
+    if (!defaultPassword) {
+      return existing;
+    }
+
+    const updated = Object.fromEntries(
+      Object.entries(userPlan).map(([key, user]) => [
+        key,
+        {
+          email: user.email,
+          password: defaultPassword
+        }
+      ])
+    );
+    writeFileSync(credentialPath, `${JSON.stringify(updated, null, 2)}\n`, { mode: 0o600 });
+    return updated;
   }
 
   const generated = Object.fromEntries(
@@ -168,7 +185,7 @@ function loadOrCreateCredentials() {
       key,
       {
         email: user.email,
-        password: `Fulscann-${key}-${randomBytes(12).toString("hex")}!`
+        password: defaultPassword || `Fulscann-${key}-${randomBytes(12).toString("hex")}!`
       }
     ])
   );
@@ -181,7 +198,7 @@ async function findOrCreateAuthUser(user) {
   const existing = await findAuthUserByEmail(user.email);
   if (existing) return existing;
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+  const response = await fetchWithRetry(`${supabaseUrl}/auth/v1/admin/users`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -200,7 +217,7 @@ async function findOrCreateAuthUser(user) {
 }
 
 async function updateAuthPassword(userId, password) {
-  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+  const response = await fetchWithRetry(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
     method: "PUT",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ password, email_confirm: true })
@@ -214,7 +231,7 @@ async function updateAuthPassword(userId, password) {
 async function findAuthUserByEmail(email) {
   let page = 1;
   while (page < 20) {
-    const response = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=100`, { headers: authHeaders() });
+    const response = await fetchWithRetry(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=100`, { headers: authHeaders() });
     if (!response.ok) throw new Error(`Failed to list Auth users: ${response.status} ${await response.text()}`);
     const data = await response.json();
     const match = data.users.find((user) => user.email?.toLowerCase() === email);
@@ -229,7 +246,7 @@ async function upsert(table, row) {
 }
 
 async function upsertMany(table, rows) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}?on_conflict=id`, {
+  const response = await fetchWithRetry(`${supabaseUrl}/rest/v1/${table}?on_conflict=id`, {
     method: "POST",
     headers: {
       ...authHeaders(),
@@ -242,6 +259,22 @@ async function upsertMany(table, rows) {
   if (!response.ok) {
     throw new Error(`Failed to upsert ${table}: ${response.status} ${await response.text()}`);
   }
+}
+
+async function fetchWithRetry(url, options, attempts = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+    }
+  }
+
+  throw lastError;
 }
 
 function loadEnvLocal() {
