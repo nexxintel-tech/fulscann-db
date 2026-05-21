@@ -1,9 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { createSupabaseRouteClient } from "@/lib/supabase/server";
+import { z } from "zod";
+import { getSelfServiceSignupRole, normalizeSignupEmail } from "@/lib/auth/signup";
+import { hasSupabaseConfig, hasSupabaseServiceConfig } from "@/lib/supabase/config";
+import { createSupabaseAdminClient, createSupabaseRouteClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getDefaultRouteForRole } from "@/lib/auth/session";
+
+const createAccountSchema = z.object({
+  fullName: z.string().min(2).max(120),
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+  confirmPassword: z.string().min(8).max(128)
+}).refine((input) => input.password === input.confirmPassword, {
+  message: "Passwords must match.",
+  path: ["confirmPassword"]
+});
 
 export async function signInWithEmailPassword(formData: FormData) {
   if (!hasSupabaseConfig()) {
@@ -22,6 +34,60 @@ export async function signInWithEmailPassword(formData: FormData) {
 
   const profile = await getCurrentProfile();
   redirect(profile ? getDefaultRouteForRole(profile.platformRole) : "/login?error=missing-profile");
+}
+
+export async function createBusinessAccount(formData: FormData) {
+  if (!hasSupabaseConfig()) {
+    redirect("/dashboard/ceo");
+  }
+
+  if (!hasSupabaseServiceConfig()) {
+    redirect("/login?mode=create&error=server-config");
+  }
+
+  const parsed = createAccountSchema.safeParse({
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword")
+  });
+
+  if (!parsed.success) {
+    redirect("/login?mode=create&error=invalid-create-account");
+  }
+
+  const supabase = await createSupabaseRouteClient();
+  const email = normalizeSignupEmail(parsed.data.email);
+  const platformRole = getSelfServiceSignupRole();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: parsed.data.password,
+    options: {
+      data: {
+        full_name: parsed.data.fullName,
+        platform_role: platformRole
+      }
+    }
+  });
+
+  if (error || !data.user) {
+    redirect(`/login?mode=create&error=${encodeURIComponent(error?.message ?? "create-account-failed")}`);
+  }
+
+  await createSupabaseAdminClient()
+    .from("profiles")
+    .upsert({
+      id: data.user.id,
+      email,
+      full_name: parsed.data.fullName,
+      platform_role: platformRole
+    });
+
+  if (!data.session) {
+    redirect("/login?created=check-email");
+  }
+
+  redirect("/dashboard/ceo/onboarding");
 }
 
 export async function signOut() {
