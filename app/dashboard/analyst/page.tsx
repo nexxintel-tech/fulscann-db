@@ -1,5 +1,6 @@
 import { BusinessTable } from "@/components/dashboard/business-table";
 import { IcActionTable } from "@/components/dashboard/ic-action-table";
+import { FormSuggestions } from "@/components/forms/form-suggestions";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   addInternalNote,
@@ -13,6 +14,7 @@ import {
 import { getBusinessReadiness } from "@/lib/analyst/readiness";
 import { ANALYST_BUSINESS_CAPACITY } from "@/lib/analyst/workload";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getAnalystExceptionSuggestions } from "@/lib/forms/suggestions";
 import { getAssignedOpenExceptions, getAvailableExceptionActions } from "@/lib/ic-engine/actions";
 import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
@@ -87,6 +89,7 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
                 <strong>{business?.legalName ?? "Business"} - {exception.title}</strong>
                 <br />
                 {exception.riskLevel} risk, {exception.status}, open {exception.daysOpen} days
+                <FormSuggestions suggestions={getAnalystExceptionSuggestions(exception)} />
                 <div className="grid grid-3 action-grid">
                   <form action={markExceptionInReview} className="compact-form">
                     <input type="hidden" name="businessId" value={exception.businessId} />

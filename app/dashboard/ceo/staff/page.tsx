@@ -1,6 +1,8 @@
 import { inviteStaffMember } from "@/app/dashboard/ceo/staff/actions";
+import { FormSuggestions } from "@/components/forms/form-suggestions";
 import { StatCard } from "@/components/ui/stat-card";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getStaffInviteSuggestions } from "@/lib/forms/suggestions";
 import { getPendingStaffInvitations, getStaffAssignableDepartments } from "@/lib/staff/reporting";
 
 type CeoStaffPageProps = {
@@ -13,6 +15,10 @@ export default async function CeoStaffPage({ searchParams }: CeoStaffPageProps) 
   const business = businesses[0];
   const assignableDepartments = business ? getStaffAssignableDepartments(departments, business.id) : [];
   const pendingInvitations = business ? getPendingStaffInvitations(staffInvitations, business.id) : [];
+  const inviteSuggestions = getStaffInviteSuggestions({
+    departments: assignableDepartments,
+    pendingInvitations
+  });
 
   return (
     <div className="stack">
@@ -31,6 +37,7 @@ export default async function CeoStaffPage({ searchParams }: CeoStaffPageProps) 
       <section className="grid grid-2">
         <article className="card">
           <h2>Invite staff</h2>
+          <FormSuggestions suggestions={inviteSuggestions} />
           <form action={inviteStaffMember} className="form">
             <input type="hidden" name="businessId" value={business?.id ?? ""} />
             <label>

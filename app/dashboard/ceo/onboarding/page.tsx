@@ -4,8 +4,10 @@ import {
   createKpiTarget,
   submitAssessment
 } from "@/app/dashboard/ceo/onboarding/actions";
+import { FormSuggestions } from "@/components/forms/form-suggestions";
 import { StatCard } from "@/components/ui/stat-card";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getOnboardingFormSuggestions } from "@/lib/forms/suggestions";
 
 type CeoOnboardingPageProps = {
   searchParams: Promise<{ action?: string }>;
@@ -20,6 +22,11 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
   const latestAssessment = business
     ? assessmentResults.find((assessment) => assessment.businessId === business.id)
     : undefined;
+  const onboardingSuggestions = getOnboardingFormSuggestions({
+    business,
+    departments: businessDepartments,
+    kpiTargets: businessKpis
+  });
 
   return (
     <div className="stack">
@@ -40,6 +47,7 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
       <section className="grid grid-2">
         <article className="card">
           <h2>Business profile</h2>
+          <FormSuggestions suggestions={onboardingSuggestions.filter((suggestion) => suggestion.id === "business-profile-first")} />
           <form action={createBusinessProfile} className="form">
             <label>
               Legal name
@@ -80,6 +88,7 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
 
         <article className="card">
           <h2>KPI setup</h2>
+          <FormSuggestions suggestions={onboardingSuggestions.filter((suggestion) => suggestion.field === "name")} />
           <form action={createKpiTarget} className="form">
             <BusinessIdInput businessId={business?.id} />
             <label>
@@ -110,6 +119,7 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
 
         <article className="card">
           <h2>Department setup</h2>
+          <FormSuggestions suggestions={onboardingSuggestions.filter((suggestion) => suggestion.field === "departmentType")} />
           <form action={createDepartment} className="form">
             <BusinessIdInput businessId={business?.id} />
             <label>

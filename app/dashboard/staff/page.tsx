@@ -1,8 +1,10 @@
 import { attachEvidenceToReport, submitDepartmentReport } from "@/app/dashboard/staff/actions";
+import { FormSuggestions } from "@/components/forms/form-suggestions";
 import { StatCard } from "@/components/ui/stat-card";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getPlatformSnapshot } from "@/lib/data/repository";
 import { getEvidenceForReport } from "@/lib/evidence/quality";
+import { getEvidenceUploadSuggestions, getStaffReportSuggestions } from "@/lib/forms/suggestions";
 import { getActiveStaffMembership } from "@/lib/staff/onboarding";
 import { getReportsForDepartment } from "@/lib/staff/reporting";
 
@@ -13,7 +15,7 @@ type StaffDashboardProps = {
 export default async function StaffDashboard({ searchParams }: StaffDashboardProps) {
   const params = await searchParams;
   const profile = await getCurrentProfile();
-  const { businesses, departments, departmentReports, evidenceFiles, businessUsers } = await getPlatformSnapshot();
+  const { businesses, departments, departmentReports, evidenceFiles, businessUsers, controlExceptions } = await getPlatformSnapshot();
   const membership = getActiveStaffMembership(businessUsers, profile?.id);
   const business = membership
     ? businesses.find((item) => item.id === membership.businessId)
@@ -28,6 +30,18 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
     : [];
   const pendingReports = reports.filter((report) => report.status === "draft").length;
   const submittedReports = reports.filter((report) => report.status === "submitted").length;
+  const reportEvidenceFiles = evidenceFiles.filter((evidence) => reports.some((report) => report.id === evidence.reportId));
+  const businessExceptions = business ? controlExceptions.filter((exception) => exception.businessId === business.id) : [];
+  const reportSuggestions = getStaffReportSuggestions({
+    department: assignedDepartment,
+    reports,
+    evidenceFiles: reportEvidenceFiles,
+    exceptions: businessExceptions
+  });
+  const evidenceSuggestions = getEvidenceUploadSuggestions({
+    report: reports.find((report) => report.status === "submitted") ?? reports[0],
+    exceptions: businessExceptions
+  });
 
   return (
     <div className="stack">
@@ -47,6 +61,7 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
       <section className="grid grid-2">
         <article className="card">
           <h2>Submit report</h2>
+          <FormSuggestions suggestions={reportSuggestions} />
           <form action={submitDepartmentReport} className="form">
             <input type="hidden" name="businessId" value={business?.id ?? ""} />
             <label>
@@ -125,6 +140,7 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
 
       <section className="card">
         <h2>Attach evidence</h2>
+        <FormSuggestions suggestions={evidenceSuggestions} />
         <form action={attachEvidenceToReport} className="form form-inline">
           <input type="hidden" name="businessId" value={business?.id ?? ""} />
           <label>

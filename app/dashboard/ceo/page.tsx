@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IcActionTable } from "@/components/dashboard/ic-action-table";
+import { FormSuggestions } from "@/components/forms/form-suggestions";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   respondToClarification,
@@ -14,6 +15,7 @@ import {
   getOpenExceptions
 } from "@/lib/ceo/actions";
 import { getPlatformSnapshot } from "@/lib/data/repository";
+import { getCeoExceptionResolutionSuggestions } from "@/lib/forms/suggestions";
 import { getBusinessesNeedingIcAction, getIcBusinessActions } from "@/lib/ic-engine/dashboard";
 
 type CeoDashboardProps = {
@@ -135,6 +137,7 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
                 <strong>{exception.title}</strong>
                 <br />
                 {exception.riskLevel} risk, open {exception.daysOpen} days
+                <FormSuggestions suggestions={getCeoExceptionResolutionSuggestions(exception)} />
                 <form action={resolveException} className="form compact-form">
                   <input type="hidden" name="businessId" value={business.id} />
                   <input type="hidden" name="linkedEntityId" value={exception.id} />
