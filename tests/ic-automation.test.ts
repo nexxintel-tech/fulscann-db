@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runBusinessIcAutomation, runSalesFinanceAutomation } from "@/lib/ic-engine/automation";
-import type { DepartmentReport, EvidenceFile } from "@/lib/types";
+import type { ControlException, DepartmentReport, EvidenceFile } from "@/lib/types";
 
 const baseReports: DepartmentReport[] = [
   {
@@ -171,4 +171,49 @@ describe("IC automation", () => {
     expect(result.exceptionCandidates.map((exception) => exception.title)).toContain("Sales-finance mismatch");
     expect(result.newExceptionCandidates.map((exception) => exception.title)).not.toContain("Sales-finance mismatch");
   });
+
+  it("recovers IC score after evidence is fixed and the related exception is resolved", () => {
+    const weakEvidenceResult = runBusinessIcAutomation({
+      reports: baseReports.map((report) => ({ ...report, value: report.department === "finance" ? 1_980_000 : report.value })),
+      existingExceptions: [exception("Report evidence missing", "Orange", "open")],
+      evidenceCompletion: 35,
+      evidenceFiles: []
+    });
+    const recoveredResult = runBusinessIcAutomation({
+      reports: baseReports.map((report) => ({ ...report, value: report.department === "finance" ? 1_980_000 : report.value })),
+      existingExceptions: [exception("Report evidence missing", "Orange", "resolved")],
+      evidenceCompletion: 35,
+      evidenceFiles: baseEvidence
+    });
+
+    expect(recoveredResult.newExceptionCandidates).toHaveLength(0);
+    expect(recoveredResult.icScore).toBeGreaterThan(weakEvidenceResult.icScore);
+    expect(recoveredResult.scoreFactors.resolutionBehavior).toBeGreaterThan(weakEvidenceResult.scoreFactors.resolutionBehavior);
+  });
+
+  it("reopens a fresh candidate when a resolved exception still fails recheck", () => {
+    const result = runBusinessIcAutomation({
+      reports: baseReports,
+      existingExceptions: [exception("Sales-finance mismatch", "Red", "resolved")],
+      evidenceCompletion: 70,
+      evidenceFiles: baseEvidence
+    });
+
+    expect(result.exceptionLifecycle.find((review) => review.candidate.title === "Sales-finance mismatch")).toMatchObject({
+      state: "resolved_history",
+      shouldCreate: true
+    });
+    expect(result.newExceptionCandidates.map((candidate) => candidate.title)).toContain("Sales-finance mismatch");
+  });
 });
+
+function exception(title: string, riskLevel: ControlException["riskLevel"], status: ControlException["status"]): ControlException {
+  return {
+    id: `exc_${title}`,
+    businessId: "biz_1",
+    title,
+    riskLevel,
+    status,
+    daysOpen: 1
+  };
+}

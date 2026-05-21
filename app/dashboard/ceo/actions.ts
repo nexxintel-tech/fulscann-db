@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { canMoveExceptionStatus } from "@/lib/ic-engine/actions";
+import { runIcAutomationForBusiness } from "@/lib/ic-engine/workflow";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 import type { ExceptionStatus } from "@/lib/types";
@@ -139,6 +140,14 @@ export async function resolveException(formData: FormData) {
     metadata: { response_id: response.id, previous_status: exception.status, next_status: "resolved" }
   });
 
+  await runIcAutomationForBusiness({
+    businessId,
+    actorUserId: profile.id,
+    trigger: "exception_resolved",
+    entityType: "control_exception",
+    entityId: linkedEntityId
+  });
+
   revalidateCeoPaths();
   redirect("/dashboard/ceo?action=exception-resolved");
 }
@@ -251,5 +260,6 @@ async function writeAuditEvent(input: {
 function revalidateCeoPaths() {
   revalidatePath("/dashboard/ceo");
   revalidatePath("/dashboard/analyst");
+  revalidatePath("/dashboard/super-admin");
   revalidatePath("/institution");
 }
