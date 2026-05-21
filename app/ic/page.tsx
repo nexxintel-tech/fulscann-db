@@ -2,10 +2,12 @@ import Link from "next/link";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { StatCard } from "@/components/ui/stat-card";
 import { runBusinessIcAutomation } from "@/lib/ic-engine/automation";
-import { getDemoSnapshot } from "@/lib/data/demo-snapshot";
+import { IC_RULE_REGISTRY } from "@/lib/ic-engine/rules";
+import { IC_WORKBENCH_SCENARIOS, getIcWorkbenchScenario } from "@/lib/ic-engine/scenarios";
 
 type IcDemoPageProps = {
   searchParams: Promise<{
+    scenario?: string;
     sales?: string;
     finance?: string;
     evidence?: string;
@@ -15,26 +17,21 @@ type IcDemoPageProps = {
 
 export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
   const params = await searchParams;
-  const salesValue = toNumber(params.sales, 2_000_000);
-  const financeValue = toNumber(params.finance, 1_200_000);
-  const evidenceCompletion = toNumber(params.evidence, 70);
-  const { departmentReports, controlExceptions } = getDemoSnapshot();
-  const reports = [
-    { ...departmentReports[0], id: "demo_sales", value: salesValue, department: "sales" as const },
-    { ...departmentReports[1], id: "demo_finance", value: financeValue, department: "finance" as const },
-    {
-      ...departmentReports[0],
-      id: "demo_procurement",
-      value: 750_000,
-      department: "procurement" as const,
-      evidenceCount: 0
-    }
-  ];
-  const existingExceptions = params.duplicate === "1" ? controlExceptions : [];
+  const scenario = getIcWorkbenchScenario(params.scenario);
+  const salesValue = toNumber(params.sales, scenario.reports.find((report) => report.department === "sales")?.value ?? 2_000_000);
+  const financeValue = toNumber(params.finance, scenario.reports.find((report) => report.department === "finance")?.value ?? 1_200_000);
+  const evidenceCompletion = toNumber(params.evidence, scenario.evidenceCompletion);
+  const reports = scenario.reports.map((report) => {
+    if (report.department === "sales") return { ...report, value: salesValue };
+    if (report.department === "finance") return { ...report, value: financeValue };
+    return report;
+  });
+  const existingExceptions = params.duplicate === "1" ? scenario.existingExceptions : [];
   const result = runBusinessIcAutomation({
     reports,
     existingExceptions,
-    evidenceCompletion
+    evidenceCompletion,
+    evidenceFiles: scenario.evidenceFiles
   });
 
   return (
@@ -43,23 +40,43 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
       <section className="page-title">
         <h1>IC mechanism test</h1>
         <p>Run internal control checks without authentication or database writes.</p>
+        <p>Scenario: {scenario.name}. {scenario.description}</p>
       </section>
 
       <section className="grid grid-3">
-        <Link className="button" href="/ic?sales=1000000&finance=980000&evidence=85">
-          Green scenario
-        </Link>
-        <Link className="button" href="/ic?sales=1000000&finance=850000&evidence=65">
-          Orange scenario
-        </Link>
-        <Link className="button" href="/ic?sales=2000000&finance=1200000&evidence=45">
-          Red scenario
-        </Link>
+        {IC_WORKBENCH_SCENARIOS.map((item) => (
+          <Link key={item.id} className="button" href={`/ic?scenario=${item.id}`}>
+            {item.name}
+          </Link>
+        ))}
+      </section>
+
+      <section className="card">
+        <h2>Rule registry</h2>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Rule</th>
+              <th>Description</th>
+              <th>Score factors</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.values(IC_RULE_REGISTRY).map((rule) => (
+              <tr key={rule.id}>
+                <td>{rule.title}</td>
+                <td>{rule.description}</td>
+                <td>{rule.scoreFactors.map(formatFactor).join(", ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <section className="card">
         <h2>Inputs</h2>
         <form className="form form-inline" action="/ic">
+          <input type="hidden" name="scenario" value={scenario.id} />
           <label>
             Sales report value
             <input name="sales" type="number" min="0" step="1000" defaultValue={salesValue} />
@@ -128,16 +145,16 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
             </article>
 
             <article className="card">
-              <h2>Exception candidates</h2>
+              <h2>Exception lifecycle</h2>
               <ul className="list">
-                {result.newExceptionCandidates.map((exception) => (
-                  <li key={exception.title}>
-                    <strong>{exception.riskLevel}: {exception.title}</strong>
+                {result.exceptionLifecycle.map((review) => (
+                  <li key={`${review.candidate.title}:${review.state}`}>
+                    <strong>{review.candidate.riskLevel}: {review.candidate.title}</strong>
                     <br />
-                    {exception.description}
+                    {review.state} {review.shouldCreate ? "(create)" : "(do not create)"}
                   </li>
                 ))}
-                {result.newExceptionCandidates.length === 0 ? <li>No new exception candidates.</li> : null}
+                {result.exceptionLifecycle.length === 0 ? <li>No exception candidates.</li> : null}
               </ul>
             </article>
           </section>

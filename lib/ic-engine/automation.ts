@@ -5,15 +5,17 @@ import {
   checkSalesFinanceMatch,
   type IcCheckResult
 } from "@/lib/ic-engine/checks";
+import {
+  type ExceptionCandidate,
+  type ExceptionLifecycleReview,
+  reviewExceptionCandidates
+} from "@/lib/ic-engine/lifecycle";
+import { getIcRule } from "@/lib/ic-engine/rules";
+import { mapChecksToIcScoreFactors } from "@/lib/ic-engine/score-factors";
 import { getAverageEvidenceLevel, getEvidenceCompletionFromLevels, getEvidenceForReport } from "@/lib/evidence/quality";
+import type { IcScoreInput } from "@/lib/scoring/ic-score";
 import { calculateIcScore } from "@/lib/scoring/ic-score";
 import type { ControlException, DepartmentReport, EvidenceFile } from "@/lib/types";
-
-type ExceptionCandidate = {
-  title: string;
-  description: string;
-  riskLevel: "Yellow" | "Orange" | "Red";
-};
 
 export type IcAutomationResult = {
   shouldCreateException: boolean;
@@ -25,17 +27,10 @@ export type IcAutomationResult = {
 export type BusinessIcAutomationResult = {
   checks: IcCheckResult[];
   exceptionCandidates: ExceptionCandidate[];
+  exceptionLifecycle: ExceptionLifecycleReview[];
   newExceptionCandidates: ExceptionCandidate[];
   icScore: number;
-  scoreFactors: {
-    evidenceCompleteness: number;
-    crossDepartmentConsistency: number;
-    approvalDiscipline: number;
-    financialAlignment: number;
-    reportingTimeliness: number;
-    anomalyRisk: number;
-    resolutionBehavior: number;
-  };
+  scoreFactors: IcScoreInput;
 };
 
 export function runSalesFinanceAutomation(input: {
@@ -144,7 +139,7 @@ export function runBusinessIcAutomation(input: {
   } else if (salesFinanceResult) {
     checks.push({
       id: "sales-finance-match",
-      title: "Sales-finance match",
+      title: getIcRule("sales-finance-match").title,
       status: "pass",
       riskLevel: "Green",
       description: "Sales report and finance inflow are within tolerance.",
@@ -159,29 +154,26 @@ export function runBusinessIcAutomation(input: {
       description: check.description,
       riskLevel: check.riskLevel as "Yellow" | "Orange" | "Red"
     }));
-  const newExceptionCandidates = exceptionCandidates.filter((candidate) => !hasOpenException(input.existingExceptions, candidate.title));
+  const exceptionLifecycle = reviewExceptionCandidates(exceptionCandidates, input.existingExceptions);
+  const newExceptionCandidates = exceptionLifecycle
+    .filter((review) => review.shouldCreate)
+    .map((review) => review.candidate);
   const evidenceCompleteness = evidenceFiles.length
     ? getEvidenceCompletionFromLevels(evidenceFiles)
     : input.evidenceCompletion;
-  const failedRequiredReports = requiredReportChecks.filter((check) => check.status === "fail").length;
   const openExceptionCount = input.existingExceptions.filter((exception) => exception.status !== "resolved").length;
-  const totalImpact = checks.reduce((sum, check) => sum + check.scoreImpact, 0);
-  const hasSalesFinanceFailure = checks.some((check) => check.id === "sales-finance-match" && check.status === "fail");
-  const hasApprovalFailure = checks.some((check) => check.id === "procurement-approval" && check.status === "fail");
-  const evidenceFailures = checks.filter((check) => check.id.startsWith("evidence:") && check.status !== "pass").length;
-  const scoreFactors = {
+  const scoreFactors = mapChecksToIcScoreFactors({
+    checks,
     evidenceCompleteness,
-    crossDepartmentConsistency: Math.max(35, 100 - failedRequiredReports * 25 - (hasSalesFinanceFailure ? 25 : 0)),
-    approvalDiscipline: hasApprovalFailure ? 45 : 82,
-    financialAlignment: hasSalesFinanceFailure ? Math.max(35, salesFinanceResult?.icScore ?? 55) : 90,
-    reportingTimeliness: Math.max(45, 90 - failedRequiredReports * 20),
-    anomalyRisk: Math.max(25, 95 - totalImpact),
-    resolutionBehavior: Math.max(35, 78 - openExceptionCount * 8 - evidenceFailures * 6)
-  };
+    requiredReportCheckIds: requiredReportChecks.map((check) => check.id),
+    existingOpenExceptionCount: openExceptionCount,
+    salesFinanceScore: salesFinanceResult?.icScore
+  });
 
   return {
     checks,
     exceptionCandidates,
+    exceptionLifecycle,
     newExceptionCandidates,
     icScore: calculateIcScore(scoreFactors),
     scoreFactors
@@ -192,8 +184,4 @@ function getLatestReport(reports: DepartmentReport[], department: DepartmentRepo
   return reports
     .filter((report) => report.department === department)
     .at(-1);
-}
-
-function hasOpenException(exceptions: ControlException[], title: string) {
-  return exceptions.some((exception) => exception.title === title && exception.status !== "resolved");
 }
