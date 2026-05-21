@@ -41,12 +41,12 @@ export default async function SuperAdminDashboard({ searchParams }: SuperAdminDa
         <StatCard label="IC action queue" value={icActionQueue.length} detail="Businesses needing control review" />
       </section>
 
-      <section className="card">
+      <section className="card" id="escalations">
         <h2>Platform IC action queue</h2>
         <IcActionTable rows={icActionQueue} />
       </section>
 
-      <section className="card">
+      <section className="card" id="analyst-workload">
         <h2>Escalation lifecycle</h2>
         <p>Super Admins handle escalated Analyst issues and route them to closure without taking CEO ownership.</p>
         {params.escalation ? <p className="notice">{getEscalationMessage(params.escalation)}</p> : null}
@@ -86,7 +86,7 @@ export default async function SuperAdminDashboard({ searchParams }: SuperAdminDa
         </ul>
       </section>
 
-      <section className="card">
+      <section className="card" id="assign-analyst">
         <h2>Analyst workload</h2>
         <table className="table">
           <thead>

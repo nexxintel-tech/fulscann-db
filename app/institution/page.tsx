@@ -21,7 +21,7 @@ export default async function InstitutionDashboard() {
         <StatCard label="Reports available" value={institutionAccess.length} detail="Integrity Reports" />
       </section>
 
-      <section className="card">
+      <section className="card" id="approved-reports">
         <h2>Approved business profiles</h2>
         <table className="table">
           <thead>

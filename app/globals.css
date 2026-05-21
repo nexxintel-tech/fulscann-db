@@ -75,9 +75,116 @@ a {
 }
 
 .main {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1380px, calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0 56px;
+}
+
+.dashboard-shell {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.dashboard-content {
+  min-width: 0;
+}
+
+.secondary-sidebar {
+  align-self: start;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  position: sticky;
+  top: 92px;
+}
+
+.sidebar-section {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding-bottom: 14px;
+}
+
+.sidebar-section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sidebar-section h2 {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.sidebar-section p,
+.sidebar-section span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.profile-block {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+
+.profile-block strong,
+.profile-block span {
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  align-items: center;
+  background: #d9f5f1;
+  border: 1px solid #a6e4dc;
+  border-radius: 8px;
+  color: var(--brand-dark);
+  display: flex;
+  font-weight: 800;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.role-badge {
+  background: #eef8f6;
+  border: 1px solid #c8e8e3;
+  border-radius: 999px;
+  color: var(--brand-dark) !important;
+  display: inline-flex;
+  font-size: 12px !important;
+  font-weight: 700;
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 5px 9px;
+}
+
+.sidebar-links a,
+.account-actions a,
+.account-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #26344d;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.account-actions form {
+  display: grid;
+}
+
+.account-actions button {
+  cursor: pointer;
 }
 
 .page-title {
@@ -370,10 +477,15 @@ a {
     padding: 16px;
   }
 
+  .dashboard-shell,
   .grid-2,
   .grid-3,
   .form-inline {
     grid-template-columns: 1fr;
+  }
+
+  .secondary-sidebar {
+    position: static;
   }
 
   .table {

@@ -68,12 +68,12 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
         <StatCard label="IC actions" value={icActionQueue.length} detail="Assigned businesses needing review" />
       </section>
 
-      <section className="card">
+      <section className="card" id="ic-review">
         <h2>IC review queue</h2>
         <IcActionTable rows={icActionQueue} />
       </section>
 
-      <section className="card">
+      <section className="card" id="exception-actions">
         <h2>Exception action queue</h2>
         <p>
           Analyst actions move exceptions into review, request clarification, or escalate high-risk issues. Resolution
@@ -122,7 +122,7 @@ export default async function AnalystDashboard({ searchParams }: AnalystDashboar
         </ul>
       </section>
 
-      <section className="card">
+      <section className="card" id="analyst-actions">
         <h2>Assigned business readiness</h2>
         <BusinessTable rows={readiness} />
       </section>
