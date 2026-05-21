@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "supabase:bootstrap-auth": "node scripts/bootstrap-auth-users.mjs",
+    "supabase:bootstrap-secure-test-data": "node scripts/bootstrap-secure-test-data.mjs",
     "supabase:verify": "node scripts/verify-supabase.mjs",
     "supabase:verify-secure": "node scripts/verify-secure-workflow.mjs",
     "typecheck": "tsc --noEmit",

@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const required = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "FULSCANN_TEST_USERS"];
+const required = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"];
 const expectedRoles = {
   superAdmin: "super_admin",
   analyst: "analyst",
@@ -15,13 +15,12 @@ loadEnvLocal();
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length > 0) {
   console.error(`Missing required env values: ${missing.join(", ")}`);
-  console.error("Set FULSCANN_TEST_USERS to a JSON object with superAdmin, analyst, ceo, staff, and institution credentials.");
   process.exit(1);
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, "");
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const users = parseUsers(process.env.FULSCANN_TEST_USERS);
+const users = parseUsers(process.env.FULSCANN_TEST_USERS ?? loadGeneratedTestUsers());
 const checks = [];
 
 for (const [key, expectedRole] of Object.entries(expectedRoles)) {
@@ -52,6 +51,47 @@ await check("Staff can see accepted business membership through RLS", async () =
   const active = memberships.filter((membership) => membership.status === "active");
   if (active.length === 0) throw new Error("staff user sees no active business membership");
   return `${active.length} active membership row(s) visible`;
+});
+
+await check("Staff can upload evidence through private storage RLS", async () => {
+  const session = await signIn(users.staff);
+  const memberships = await requestJson(session, "/rest/v1/business_users?select=business_id,status");
+  const membership = memberships.find((item) => item.status === "active");
+  if (!membership) throw new Error("staff user sees no active business membership");
+
+  const reports = await requestJson(session, `/rest/v1/department_reports?business_id=eq.${membership.business_id}&select=id,business_id`);
+  const report = reports[0];
+  if (!report) throw new Error("staff user sees no department report to attach evidence to");
+
+  const path = `${membership.business_id}/${report.id}/secure-rls-${Date.now()}.txt`;
+  const upload = await requestRaw(session, `/storage/v1/object/evidence-files/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+      "x-upsert": "false"
+    },
+    body: "secure workflow evidence upload check"
+  });
+  if (!upload.ok) throw new Error(`storage upload rejected: ${upload.status} ${await upload.text()}`);
+
+  const evidenceRows = await requestJson(session, "/rest/v1/evidence_files?select=id", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({
+      business_id: membership.business_id,
+      report_id: report.id,
+      uploaded_by: session.user.id,
+      file_name: "secure-rls-check.txt",
+      file_type: "verification",
+      storage_path: path,
+      file_size: 35,
+      evidence_level: 2,
+      verification_status: "pending"
+    })
+  });
+  if (evidenceRows.length === 0) throw new Error("evidence metadata insert did not return a row");
+
+  return `uploaded private evidence and inserted metadata row`;
 });
 
 await check("Analyst can see assigned businesses but not write CEO-owned business data", async () => {
@@ -146,6 +186,10 @@ async function check(name, fn) {
 }
 
 function parseUsers(value) {
+  if (!value) {
+    throwExit("Set FULSCANN_TEST_USERS or run npm run supabase:bootstrap-secure-test-data first.");
+  }
+
   let parsed;
   try {
     parsed = JSON.parse(value);
@@ -160,6 +204,15 @@ function parseUsers(value) {
   }
 
   return parsed;
+}
+
+function loadGeneratedTestUsers() {
+  const credentialPath = resolve(process.cwd(), ".fulscann-test-users.local.json");
+  if (!existsSync(credentialPath)) {
+    return undefined;
+  }
+
+  return readFileSync(credentialPath, "utf8");
 }
 
 function loadEnvLocal() {
