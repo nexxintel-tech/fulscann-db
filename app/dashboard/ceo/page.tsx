@@ -75,7 +75,7 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
         <StatCard label="IC actions" value={icActionQueue.length} detail="Control issues needing CEO action" />
       </section>
 
-      <section className="card">
+      <section className="card" id="integrity-report-sharing">
         <h2>IC action queue</h2>
         <IcActionTable rows={icActionQueue} />
       </section>

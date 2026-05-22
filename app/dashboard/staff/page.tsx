@@ -15,7 +15,7 @@ type StaffDashboardProps = {
 export default async function StaffDashboard({ searchParams }: StaffDashboardProps) {
   const params = await searchParams;
   const profile = await getCurrentProfile();
-  const { businesses, departments, departmentReports, evidenceFiles, businessUsers, controlExceptions } = await getPlatformSnapshot();
+  const { businesses, departments, departmentReports, evidenceFiles, businessUsers, controlExceptions, analystNotes } = await getPlatformSnapshot();
   const membership = getActiveStaffMembership(businessUsers, profile?.id);
   const business = membership
     ? businesses.find((item) => item.id === membership.businessId)
@@ -32,6 +32,12 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
   const submittedReports = reports.filter((report) => report.status === "submitted").length;
   const reportEvidenceFiles = evidenceFiles.filter((evidence) => reports.some((report) => report.id === evidence.reportId));
   const businessExceptions = business ? controlExceptions.filter((exception) => exception.businessId === business.id) : [];
+  const departmentIssues = assignedDepartment
+    ? businessExceptions.filter((exception) => exception.title.toLowerCase().includes(assignedDepartment.departmentType))
+    : businessExceptions;
+  const returnedCorrections = business
+    ? analystNotes.filter((note) => note.businessId === business.id && note.noteType === "clarification_request")
+    : [];
   const reportSuggestions = getStaffReportSuggestions({
     department: assignedDepartment,
     reports,
@@ -60,7 +66,7 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
 
       <section className="grid grid-2">
         <article className="card">
-          <h2>Submit report</h2>
+          <h2 id="submit-report">Submit report</h2>
           <FormSuggestions suggestions={reportSuggestions} />
           <form action={submitDepartmentReport} className="form">
             <input type="hidden" name="businessId" value={business?.id ?? ""} />
@@ -139,7 +145,8 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
       </section>
 
       <section className="card">
-        <h2>Attach evidence</h2>
+        <h2 id="upload-evidence">Attach evidence</h2>
+        <div id="staff-suggestions" />
         <FormSuggestions suggestions={evidenceSuggestions} />
         <form action={attachEvidenceToReport} className="form form-inline">
           <input type="hidden" name="businessId" value={business?.id ?? ""} />
@@ -175,6 +182,35 @@ export default async function StaffDashboard({ searchParams }: StaffDashboardPro
             Attach evidence
           </button>
         </form>
+      </section>
+
+      <section className="grid grid-2">
+        <article className="card" id="returned-corrections">
+          <h2>Returned corrections</h2>
+          <ul className="list">
+            {returnedCorrections.map((note) => (
+              <li key={note.id}>
+                <strong>Correction request</strong>
+                <p>{note.body}</p>
+              </li>
+            ))}
+            {returnedCorrections.length === 0 ? <li>No returned corrections for this department.</li> : null}
+          </ul>
+        </article>
+
+        <article className="card" id="department-ic-issues">
+          <h2>Department IC issues</h2>
+          <ul className="list">
+            {departmentIssues.map((exception) => (
+              <li key={exception.id}>
+                <strong>{exception.title}</strong>
+                <br />
+                {exception.riskLevel} risk, {exception.status}, open {exception.daysOpen} days
+              </li>
+            ))}
+            {departmentIssues.length === 0 ? <li>No open department IC issues.</li> : null}
+          </ul>
+        </article>
       </section>
     </div>
   );

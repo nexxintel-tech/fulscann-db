@@ -1,5 +1,6 @@
 import type { AuthProfile } from "@/lib/auth/session";
 import type { PlatformRole } from "@/lib/auth/roles";
+import type { BusinessAccessPersona } from "@/lib/auth/business-access";
 
 export type DashboardWorkspaceContext = {
   label: string;
@@ -20,28 +21,42 @@ export type DashboardSidebarModel = {
   quickActions: DashboardSidebarLink[];
 };
 
-export function getDashboardSidebarModel(profile: AuthProfile, workspace?: Partial<DashboardWorkspaceContext>): DashboardSidebarModel {
+export function getDashboardSidebarModel(
+  profile: AuthProfile,
+  workspace?: Partial<DashboardWorkspaceContext>,
+  businessPersona?: BusinessAccessPersona
+): DashboardSidebarModel {
+  const roleKey = getSidebarRoleKey(profile.platformRole, businessPersona);
+
   return {
     profile,
-    roleLabel: getRoleLabel(profile.platformRole),
+    roleLabel: getRoleLabel(profile.platformRole, businessPersona),
     workspace: {
-      label: workspace?.label ?? getDefaultWorkspace(profile.platformRole).label,
-      value: workspace?.value ?? getDefaultWorkspace(profile.platformRole).value,
-      detail: workspace?.detail ?? getDefaultWorkspace(profile.platformRole).detail
+      label: workspace?.label ?? getDefaultWorkspace(roleKey).label,
+      value: workspace?.value ?? getDefaultWorkspace(roleKey).value,
+      detail: workspace?.detail ?? getDefaultWorkspace(roleKey).detail
     },
-    navigation: getRoleNavigation(profile.platformRole),
-    quickActions: getRoleQuickActions(profile.platformRole)
+    navigation: getRoleNavigation(roleKey),
+    quickActions: getRoleQuickActions(roleKey)
   };
 }
 
-export function getRoleLabel(role: PlatformRole) {
+type SidebarRoleKey = PlatformRole | BusinessAccessPersona;
+
+export function getRoleLabel(role: PlatformRole, businessPersona?: BusinessAccessPersona) {
   if (role === "super_admin") return "Fulscann Super Admin";
   if (role === "analyst") return "Fulscann Analyst";
-  if (role === "business_user") return "Business User";
+  if (role === "business_user" && businessPersona === "staff") return "Staff";
+  if (role === "business_user") return "Business CEO";
   return "Institution User";
 }
 
-function getDefaultWorkspace(role: PlatformRole): DashboardWorkspaceContext {
+function getSidebarRoleKey(role: PlatformRole, businessPersona?: BusinessAccessPersona): SidebarRoleKey {
+  if (role === "business_user") return businessPersona ?? "business_onboarding";
+  return role;
+}
+
+function getDefaultWorkspace(role: SidebarRoleKey): DashboardWorkspaceContext {
   if (role === "super_admin") {
     return { label: "Workspace", value: "Fulscann Platform", detail: "Platform-wide oversight" };
   }
@@ -54,10 +69,14 @@ function getDefaultWorkspace(role: PlatformRole): DashboardWorkspaceContext {
     return { label: "Workspace", value: "Institution access", detail: "CEO-granted report visibility" };
   }
 
-  return { label: "Workspace", value: "Business workspace", detail: "CEO or staff business access" };
+  if (role === "staff") {
+    return { label: "Workspace", value: "Staff workspace", detail: "Assigned department reporting" };
+  }
+
+  return { label: "Workspace", value: "Business control center", detail: "CEO-owned business access" };
 }
 
-function getRoleNavigation(role: PlatformRole): DashboardSidebarLink[] {
+function getRoleNavigation(role: SidebarRoleKey): DashboardSidebarLink[] {
   if (role === "super_admin") {
     return [
       { label: "Super Admin dashboard", href: "/dashboard/super-admin" },
@@ -81,15 +100,26 @@ function getRoleNavigation(role: PlatformRole): DashboardSidebarLink[] {
     ];
   }
 
+  if (role === "staff") {
+    return [
+      { label: "Staff workspace", href: "/dashboard/staff" },
+      { label: "Submit department report", href: "/dashboard/staff#submit-report" },
+      { label: "Upload evidence", href: "/dashboard/staff#upload-evidence" },
+      { label: "Returned corrections", href: "/dashboard/staff#returned-corrections" },
+      { label: "Department IC issues", href: "/dashboard/staff#department-ic-issues" },
+      { label: "Suggestions", href: "/dashboard/staff#staff-suggestions" }
+    ];
+  }
+
   return [
     { label: "CEO dashboard", href: "/dashboard/ceo" },
     { label: "Onboarding", href: "/dashboard/ceo/onboarding" },
     { label: "Staff management", href: "/dashboard/ceo/staff" },
-    { label: "Staff workspace", href: "/dashboard/staff" }
+    { label: "Integrity Report sharing", href: "/dashboard/ceo#integrity-report-sharing" }
   ];
 }
 
-function getRoleQuickActions(role: PlatformRole): DashboardSidebarLink[] {
+function getRoleQuickActions(role: SidebarRoleKey): DashboardSidebarLink[] {
   if (role === "super_admin") {
     return [
       { label: "Assign Analyst", href: "/dashboard/super-admin#assign-analyst" },
@@ -108,9 +138,17 @@ function getRoleQuickActions(role: PlatformRole): DashboardSidebarLink[] {
     return [{ label: "View approved reports", href: "/institution#approved-reports" }];
   }
 
+  if (role === "staff") {
+    return [
+      { label: "Submit department report", href: "/dashboard/staff#submit-report" },
+      { label: "Upload evidence", href: "/dashboard/staff#upload-evidence" },
+      { label: "View suggestions", href: "/dashboard/staff#staff-suggestions" }
+    ];
+  }
+
   return [
     { label: "Continue onboarding", href: "/dashboard/ceo/onboarding" },
     { label: "Invite staff", href: "/dashboard/ceo/staff" },
-    { label: "Submit staff report", href: "/dashboard/staff" }
+    { label: "Share Integrity Report", href: "/dashboard/ceo#integrity-report-sharing" }
   ];
 }

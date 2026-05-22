@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getSelfServiceSignupRole, normalizeSignupEmail } from "@/lib/auth/signup";
 import { hasSupabaseConfig, hasSupabaseServiceConfig } from "@/lib/supabase/config";
 import { createSupabaseAdminClient, createSupabaseRouteClient } from "@/lib/supabase/server";
-import { getCurrentProfile, getDefaultRouteForRole } from "@/lib/auth/session";
+import { getCurrentProfile, getDefaultRouteForProfile } from "@/lib/auth/session";
 
 const createAccountSchema = z.object({
   fullName: z.string().min(2).max(120),
@@ -33,7 +33,7 @@ export async function signInWithEmailPassword(formData: FormData) {
   }
 
   const profile = await getCurrentProfile();
-  redirect(profile ? getDefaultRouteForRole(profile.platformRole) : "/login?error=missing-profile");
+  redirect(profile ? await getDefaultRouteForProfile(profile) : "/login?error=missing-profile");
 }
 
 export async function createBusinessAccount(formData: FormData) {

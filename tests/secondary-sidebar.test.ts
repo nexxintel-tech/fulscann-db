@@ -20,15 +20,34 @@ describe("secondary dashboard sidebar model", () => {
     expect(model.quickActions.map((link) => link.label)).not.toContain("Share report");
   });
 
-  it("supports business and staff workspace overrides", () => {
+  it("supports CEO workspace navigation for CEO business users", () => {
+    const model = getDashboardSidebarModel(profile("business_user"), {
+      value: "Business control center",
+      detail: "CEO-owned business access"
+    }, "ceo");
+
+    expect(model.roleLabel).toBe("Business CEO");
+    expect(model.navigation.map((link) => link.href)).toContain("/dashboard/ceo");
+    expect(model.quickActions.map((link) => link.href)).toContain("/dashboard/ceo#integrity-report-sharing");
+  });
+
+  it("keeps staff users out of CEO navigation", () => {
     const model = getDashboardSidebarModel(profile("business_user"), {
       value: "Staff workspace",
       detail: "Department reporting and evidence"
-    });
+    }, "staff");
 
-    expect(model.roleLabel).toBe("Business User");
+    const allLabels = [...model.navigation, ...model.quickActions].map((link) => link.label);
+    const allHrefs = [...model.navigation, ...model.quickActions].map((link) => link.href);
+
+    expect(model.roleLabel).toBe("Staff");
     expect(model.workspace.value).toBe("Staff workspace");
-    expect(model.navigation.map((link) => link.href)).toContain("/dashboard/staff");
+    expect(allHrefs).toContain("/dashboard/staff#upload-evidence");
+    expect(allLabels).not.toContain("CEO dashboard");
+    expect(allLabels).not.toContain("Onboarding");
+    expect(allLabels).not.toContain("Staff management");
+    expect(allLabels).not.toContain("Invite staff");
+    expect(allLabels).not.toContain("Share Integrity Report");
   });
 
   it("maps institution users to CEO-granted report navigation", () => {

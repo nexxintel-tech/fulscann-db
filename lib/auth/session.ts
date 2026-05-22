@@ -76,6 +76,27 @@ export function getDefaultRouteForRole(role: PlatformRole) {
   }
 }
 
+export async function getDefaultRouteForProfile(profile: AuthProfile) {
+  if (profile.platformRole !== "business_user" || !hasSupabaseConfig()) {
+    return getDefaultRouteForRole(profile.platformRole);
+  }
+
+  const supabase = await createSupabaseRouteClient();
+  const { data } = await supabase
+    .from("business_users")
+    .select("role, department_id, status")
+    .eq("user_id", profile.id)
+    .eq("status", "active");
+
+  const memberships = data ?? [];
+  const hasCeoMembership = memberships.some((membership) => membership.role === "ceo");
+  const hasStaffMembership = memberships.some((membership) => membership.role !== "ceo" && Boolean(membership.department_id));
+
+  if (hasCeoMembership) return "/dashboard/ceo";
+  if (hasStaffMembership) return "/dashboard/staff";
+  return "/dashboard/ceo/onboarding";
+}
+
 export function mapProfile(row: ProfileRow): AuthProfile {
   return {
     id: row.id,
