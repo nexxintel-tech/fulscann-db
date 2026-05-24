@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { buildDefaultBusinessKpis } from "@/lib/kpis/default-kpis";
+import { buildBusinessKpiInsertPayload } from "@/lib/kpis/kpi-form";
 import { calculateVeriScore } from "@/lib/scoring/veriscore";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
@@ -32,10 +34,34 @@ const kpiSchema = z.object({
   period: z.enum(["monthly", "quarterly", "annual"])
 });
 
+const addBusinessKpiSchema = z.object({
+  businessId: z.string().min(1),
+  departmentId: z.string().min(1),
+  selectedKpiKey: z.string().min(1),
+  customName: z.string().max(160).optional(),
+  targetValue: z.preprocess(
+    (value) => value === "" ? null : value,
+    z.coerce.number().nonnegative().nullable()
+  ),
+  unit: z.string().min(1).max(40),
+  defaultFrequency: z.enum(["monthly", "quarterly", "annual"])
+});
+
 const departmentSchema = z.object({
   businessId: z.string().min(1),
   name: z.string().min(2).max(120),
   departmentType: z.enum(["sales", "finance", "procurement", "operations", "hr"])
+});
+
+const businessKpiSchema = z.object({
+  businessId: z.string().min(1),
+  kpiId: z.string().min(1),
+  targetValue: z.preprocess(
+    (value) => value === "" ? null : value,
+    z.coerce.number().nonnegative().nullable()
+  ),
+  defaultFrequency: z.enum(["monthly", "quarterly", "annual"]),
+  isActive: z.enum(["true", "false"]).default("true")
 });
 
 export async function createBusinessProfile(formData: FormData) {
@@ -151,6 +177,81 @@ export async function createKpiTarget(formData: FormData) {
   redirect("/dashboard/ceo/onboarding?action=kpi-created");
 }
 
+export async function addBusinessKpi(formData: FormData) {
+  const profile = await requireRole(["business_user"]);
+  const parsed = addBusinessKpiSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) redirect("/dashboard/ceo/onboarding?action=invalid");
+  if (!hasSupabaseConfig()) redirect("/dashboard/ceo/onboarding?action=demo");
+
+  const supabase = await createSupabaseRouteClient();
+  const { businessId, departmentId, selectedKpiKey, customName, targetValue, unit, defaultFrequency } = parsed.data;
+  const { data: department } = await supabase
+    .from("departments")
+    .select("id, department_type")
+    .eq("id", departmentId)
+    .eq("business_id", businessId)
+    .single();
+
+  if (!department) redirect("/dashboard/ceo/onboarding?action=invalid-department");
+
+  let payload;
+
+  try {
+    payload = buildBusinessKpiInsertPayload({
+      businessId,
+      department: {
+        id: department.id,
+        departmentType: department.department_type
+      },
+      selectedKpiKey,
+      customName,
+      targetValue,
+      unit,
+      defaultFrequency,
+      createdBy: profile.id
+    });
+  } catch (error) {
+    redirect(`/dashboard/ceo/onboarding?action=${encodeURIComponent(error instanceof Error ? error.message : "invalid")}`);
+  }
+
+  const { data: existingKpi } = await supabase
+    .from("business_kpis")
+    .select("id")
+    .eq("business_id", businessId)
+    .eq("department_id", departmentId)
+    .eq("kpi_key", payload.kpi_key)
+    .maybeSingle();
+
+  if (existingKpi) {
+    redirect("/dashboard/ceo/onboarding?action=duplicate-kpi");
+  }
+
+  const { data: kpi, error } = await supabase
+    .from("business_kpis")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (error || !kpi) {
+    const message = error?.message.toLowerCase() ?? "";
+    if (message.includes("duplicate") || message.includes("unique")) {
+      redirect("/dashboard/ceo/onboarding?action=duplicate-kpi");
+    }
+
+    redirect(`/dashboard/ceo/onboarding?action=${encodeURIComponent(error?.message ?? "failed")}`);
+  }
+
+  await supabase.from("businesses").update({ kpi_setup_complete: true, onboarding_progress: 65 }).eq("id", businessId);
+  await writeAuditEvent(businessId, profile.id, "ceo_added_business_kpi", "business_kpi", kpi.id, {
+    kpi_key: payload.kpi_key,
+    is_default: payload.is_default,
+    department_id: departmentId
+  });
+  revalidateCeoOnboarding();
+  redirect("/dashboard/ceo/onboarding?action=business-kpi-added");
+}
+
 export async function createDepartment(formData: FormData) {
   const profile = await requireRole(["business_user"]);
   const parsed = departmentSchema.safeParse(Object.fromEntries(formData));
@@ -166,12 +267,72 @@ export async function createDepartment(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !department) redirect(`/dashboard/ceo/onboarding?action=${encodeURIComponent(error?.message ?? "failed")}`);
+  if (error || !department) {
+    const { data: existingDepartment } = await supabase
+      .from("departments")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("department_type", departmentType)
+      .single();
+
+    if (!existingDepartment) {
+      redirect(`/dashboard/ceo/onboarding?action=${encodeURIComponent(error?.message ?? "failed")}`);
+    }
+
+    await ensureDefaultKpisForDepartment({
+      businessId,
+      departmentId: existingDepartment.id,
+      departmentType,
+      createdBy: profile.id
+    });
+
+    revalidateCeoOnboarding();
+    redirect("/dashboard/ceo/onboarding?action=department-initialized");
+  }
+
+  await ensureDefaultKpisForDepartment({
+    businessId,
+    departmentId: department.id,
+    departmentType,
+    createdBy: profile.id
+  });
 
   await supabase.from("businesses").update({ onboarding_progress: 80 }).eq("id", businessId);
   await writeAuditEvent(businessId, profile.id, "ceo_created_department", "department", department.id);
   revalidateCeoOnboarding();
   redirect("/dashboard/ceo/onboarding?action=department-created");
+}
+
+export async function updateBusinessKpi(formData: FormData) {
+  const profile = await requireRole(["business_user"]);
+  const parsed = businessKpiSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) redirect("/dashboard/ceo/onboarding?action=invalid");
+  if (!hasSupabaseConfig()) redirect("/dashboard/ceo/onboarding?action=demo");
+
+  const supabase = await createSupabaseRouteClient();
+  const { businessId, kpiId, targetValue, defaultFrequency, isActive } = parsed.data;
+  const { error } = await supabase
+    .from("business_kpis")
+    .update({
+      target_value: targetValue,
+      default_frequency: defaultFrequency,
+      is_active: isActive === "true",
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", kpiId)
+    .eq("business_id", businessId);
+
+  if (error) redirect(`/dashboard/ceo/onboarding?action=${encodeURIComponent(error.message)}`);
+
+  await supabase.from("businesses").update({ kpi_setup_complete: true, onboarding_progress: 65 }).eq("id", businessId);
+  await writeAuditEvent(businessId, profile.id, "ceo_updated_business_kpi", "business_kpi", kpiId, {
+    target_value: targetValue,
+    default_frequency: defaultFrequency,
+    is_active: isActive === "true"
+  });
+  revalidateCeoOnboarding();
+  redirect("/dashboard/ceo/onboarding?action=kpi-updated");
 }
 
 async function writeAuditEvent(
@@ -196,5 +357,32 @@ async function writeAuditEvent(
 function revalidateCeoOnboarding() {
   revalidatePath("/dashboard/ceo");
   revalidatePath("/dashboard/ceo/onboarding");
+  revalidatePath("/dashboard/staff");
   revalidatePath("/dashboard/analyst");
+}
+
+async function ensureDefaultKpisForDepartment(input: {
+  businessId: string;
+  departmentId: string;
+  departmentType: "sales" | "finance" | "procurement" | "operations" | "hr";
+  createdBy: string;
+}) {
+  const rows = buildDefaultBusinessKpis({
+    businessId: input.businessId,
+    departmentId: input.departmentId,
+    departmentSlug: input.departmentType,
+    createdBy: input.createdBy
+  });
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const supabase = await createSupabaseRouteClient();
+  await supabase
+    .from("business_kpis")
+    .upsert(rows, {
+      onConflict: "business_id,department_id,kpi_key",
+      ignoreDuplicates: true
+    });
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { STAFF_INVITATION_ROLES } from "@/lib/staff/roles";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ const inviteSchema = z.object({
   businessId: z.string().min(1),
   departmentId: z.string().min(1),
   email: z.string().email(),
-  role: z.enum(["sales_officer", "finance_officer", "procurement_officer", "operations_officer", "hr_admin"])
+  role: z.enum(STAFF_INVITATION_ROLES)
 });
 
 export async function inviteStaffMember(formData: FormData) {

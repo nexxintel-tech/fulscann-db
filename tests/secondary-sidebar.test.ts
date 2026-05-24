@@ -50,6 +50,29 @@ describe("secondary dashboard sidebar model", () => {
     expect(allLabels).not.toContain("Share Integrity Report");
   });
 
+  it("keeps Departmental Head navigation scoped to departmental compliance", () => {
+    const model = getDashboardSidebarModel(profile("business_user"), {
+      value: "Sales department",
+      detail: "Departmental compliance coordination"
+    }, "department_head");
+
+    const allLabels = [...model.navigation, ...model.quickActions].map((link) => link.label);
+    const allHrefs = [...model.navigation, ...model.quickActions].map((link) => link.href);
+
+    expect(model.roleLabel).toBe("Departmental Head");
+    expect(allHrefs).toContain("/dashboard/staff#department-ic-issues");
+    expect(allHrefs).toContain("/dashboard/staff#staff-compliance");
+    expect(allLabels).toContain("Request correction");
+    expect(allLabels).toContain("Escalate to CEO");
+    expect(allLabels).not.toContain("CEO dashboard");
+    expect(allLabels).not.toContain("Onboarding");
+    expect(allLabels).not.toContain("Staff management");
+    expect(allLabels).not.toContain("Invite staff");
+    expect(allLabels).not.toContain("Share Integrity Report");
+    expect(allLabels).not.toContain("Assign Analyst");
+    expect(allLabels).not.toContain("View approved reports");
+  });
+
   it("maps institution users to CEO-granted report navigation", () => {
     const model = getDashboardSidebarModel(profile("institution_user"));
 

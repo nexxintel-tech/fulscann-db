@@ -56,6 +56,7 @@ export type DepartmentReport = {
   id: string;
   businessId: string;
   department: "sales" | "finance" | "procurement" | "operations" | "hr";
+  kpiKey?: string | null;
   status: ReportStatus;
   value: number;
   evidenceCount: number;
@@ -90,6 +91,17 @@ export type InstitutionAccess = {
   createdAt: string;
 };
 
+export type AuditEvent = {
+  id: string;
+  businessId: string | null;
+  actorUserId: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type Department = {
   id: string;
   businessId: string;
@@ -108,6 +120,27 @@ export type KpiTarget = {
   createdAt: string;
 };
 
+export type BusinessKpi = {
+  id: string;
+  businessId: string;
+  departmentId: string | null;
+  kpiKey: string;
+  name: string;
+  description: string | null;
+  measurementType: "currency" | "percentage" | "number" | "count";
+  unit: string | null;
+  targetValue: number | null;
+  defaultFrequency: "monthly" | "quarterly" | "annual";
+  evidenceRequirements: string[];
+  icRuleLinks: string[];
+  scoreFactorLinks: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AssessmentResult = {
   id: string;
   businessId: string;
@@ -121,7 +154,7 @@ export type StaffInvitation = {
   businessId: string;
   departmentId: string;
   email: string;
-  role: "sales_officer" | "finance_officer" | "procurement_officer" | "operations_officer" | "hr_admin";
+  role: "sales_officer" | "finance_officer" | "procurement_officer" | "operations_officer" | "hr_admin" | "department_head";
   status: "pending" | "accepted" | "revoked";
   invitationToken: string;
   acceptedAt: string | null;

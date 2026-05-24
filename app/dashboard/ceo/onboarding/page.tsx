@@ -1,13 +1,15 @@
 import {
+  addBusinessKpi,
   createBusinessProfile,
   createDepartment,
-  createKpiTarget,
-  submitAssessment
+  submitAssessment,
 } from "@/app/dashboard/ceo/onboarding/actions";
 import { FormSuggestions } from "@/components/forms/form-suggestions";
+import { KpiSelectorForm } from "@/components/kpis/kpi-selector-form";
 import { StatCard } from "@/components/ui/stat-card";
 import { getPlatformSnapshot } from "@/lib/data/repository";
 import { getOnboardingFormSuggestions } from "@/lib/forms/suggestions";
+import { getSelectableDefaultKpis } from "@/lib/kpis/default-kpis";
 
 type CeoOnboardingPageProps = {
   searchParams: Promise<{ action?: string }>;
@@ -15,17 +17,26 @@ type CeoOnboardingPageProps = {
 
 export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingPageProps) {
   const params = await searchParams;
-  const { businesses, departments, kpiTargets, assessmentResults } = await getPlatformSnapshot();
+  const { businesses, departments, kpiTargets, businessKpis: allBusinessKpis, assessmentResults } = await getPlatformSnapshot();
   const business = businesses[0];
   const businessDepartments = business ? departments.filter((department) => department.businessId === business.id) : [];
-  const businessKpis = business ? kpiTargets.filter((kpi) => kpi.businessId === business.id) : [];
+  const legacyKpiTargets = business ? kpiTargets.filter((kpi) => kpi.businessId === business.id) : [];
+  const businessKpis = business ? allBusinessKpis.filter((kpi) => kpi.businessId === business.id) : [];
+  const salesDepartment = businessDepartments.find((department) => department.departmentType === "sales");
+  const selectableSalesKpis = getSelectableDefaultKpis({
+    departmentSlug: "sales",
+    existingKpiKeys: salesDepartment
+      ? businessKpis.filter((kpi) => kpi.departmentId === salesDepartment.id).map((kpi) => kpi.kpiKey)
+      : []
+  });
   const latestAssessment = business
     ? assessmentResults.find((assessment) => assessment.businessId === business.id)
     : undefined;
   const onboardingSuggestions = getOnboardingFormSuggestions({
     business,
     departments: businessDepartments,
-    kpiTargets: businessKpis
+    kpiTargets: legacyKpiTargets,
+    businessKpis
   });
 
   return (
@@ -89,32 +100,12 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
         <article className="card">
           <h2>KPI setup</h2>
           <FormSuggestions suggestions={onboardingSuggestions.filter((suggestion) => suggestion.field === "name")} />
-          <form action={createKpiTarget} className="form">
-            <BusinessIdInput businessId={business?.id} />
-            <label>
-              KPI name
-              <input name="name" required minLength={2} maxLength={160} placeholder="Sales-to-Finance Match Rate" />
-            </label>
-            <label>
-              Target value
-              <input name="targetValue" type="number" min="1" step="0.01" required placeholder="95" />
-            </label>
-            <label>
-              Unit
-              <input name="unit" required minLength={1} maxLength={40} placeholder="%" />
-            </label>
-            <label>
-              Period
-              <select name="period" required defaultValue="monthly">
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="annual">Annual</option>
-              </select>
-            </label>
-            <button className="button primary" type="submit" disabled={!business}>
-              Add KPI
-            </button>
-          </form>
+          <KpiSelectorForm
+            action={addBusinessKpi}
+            businessId={business?.id}
+            departments={businessDepartments}
+            defaultKpis={selectableSalesKpis}
+          />
         </article>
 
         <article className="card">
@@ -143,21 +134,7 @@ export default async function CeoOnboardingPage({ searchParams }: CeoOnboardingP
         </article>
       </section>
 
-      <section className="grid grid-2">
-        <article className="card">
-          <h2>Current KPIs</h2>
-          <ul className="list">
-            {businessKpis.map((kpi) => (
-              <li key={kpi.id}>
-                <strong>{kpi.name}</strong>
-                <br />
-                {kpi.targetValue}
-                {kpi.unit} {kpi.period}
-              </li>
-            ))}
-            {businessKpis.length === 0 ? <li>No KPIs created yet.</li> : null}
-          </ul>
-        </article>
+      <section>
         <article className="card">
           <h2>Departments</h2>
           <ul className="list">
@@ -193,7 +170,13 @@ function getActionMessage(status: string) {
   if (status === "business-created") return "Business profile created and audited.";
   if (status === "assessment-submitted") return "Assessment submitted and VeriScore calculated.";
   if (status === "kpi-created") return "KPI target created and audited.";
+  if (status === "business-kpi-added") return "Business KPI added.";
+  if (status === "kpi-updated") return "Default KPI target updated.";
+  if (status === "duplicate-kpi") return "That KPI already exists for this business department.";
+  if (status === "invalid-kpi") return "Select a valid default KPI or add a custom KPI name.";
+  if (status === "invalid-department") return "Select a valid department for this KPI.";
   if (status === "department-created") return "Department created and audited.";
+  if (status === "department-initialized") return "Department already exists; default KPIs were checked without duplication.";
   if (status === "demo") return "Demo mode: connect Supabase to persist onboarding actions.";
   if (status === "invalid") return "Complete the required fields before submitting.";
   return `Onboarding action failed: ${status}`;

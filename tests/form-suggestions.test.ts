@@ -9,6 +9,7 @@ import {
 } from "@/lib/forms/suggestions";
 import {
   businesses,
+  businessKpis,
   controlExceptions,
   departments,
   departmentReports,
@@ -59,6 +60,30 @@ describe("smart form suggestions", () => {
     });
   });
 
+  it("adds Sales KPI-aware reporting suggestions", () => {
+    const suggestions = getStaffReportSuggestions({
+      department: departments.find((department) => department.departmentType === "sales"),
+      reports: departmentReports.filter((report) => report.department === "sales"),
+      evidenceFiles: [],
+      exceptions: [
+        ...controlExceptions,
+        {
+          id: "exc_sales_finance",
+          businessId: "biz_001",
+          title: "Sales-finance mismatch",
+          riskLevel: "Orange",
+          status: "open",
+          daysOpen: 1
+        }
+      ],
+      businessKpis
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.id)).toContain("sales-kpi-missing-invoices");
+    expect(suggestions.map((suggestion) => suggestion.id)).toContain("sales-kpi-finance-mismatch-warning");
+    expect(suggestions.map((suggestion) => suggestion.id)).toContain("sales-kpi-customer-traceability");
+  });
+
   it("recommends department-specific evidence file types", () => {
     const procurementReport = {
       ...departmentReports[0],
@@ -71,6 +96,17 @@ describe("smart form suggestions", () => {
 
     expect(suggestions.map((suggestion) => suggestion.recommendedValue)).toContain("approval");
     expect(suggestions.map((suggestion) => suggestion.id)).toContain("open-exception-evidence");
+  });
+
+  it("adds Sales KPI-aware evidence upload suggestions", () => {
+    const suggestions = getEvidenceUploadSuggestions({
+      report: departmentReports.find((report) => report.department === "sales"),
+      exceptions: controlExceptions,
+      businessKpis
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.id)).toContain("sales-invoice-evidence");
+    expect(suggestions.map((suggestion) => suggestion.id)).toContain("sales-inventory-delivery-evidence");
   });
 
   it("keeps Analyst suggestions inside oversight boundaries", () => {

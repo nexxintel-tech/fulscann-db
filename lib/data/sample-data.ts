@@ -9,13 +9,16 @@ import type {
   Department,
   DepartmentReport,
   KpiTarget,
+  BusinessKpi,
   AssessmentResult,
   BusinessUser,
   StaffInvitation,
   IcScoreResult,
   EvidenceFile,
-  InstitutionAccess
+  InstitutionAccess,
+  AuditEvent
 } from "@/lib/types";
+import { DEFAULT_SALES_KPIS } from "@/lib/kpis/default-kpis";
 
 export const businesses: Business[] = [
   {
@@ -135,7 +138,7 @@ export const controlExceptions: ControlException[] = [
 ];
 
 export const departmentReports: DepartmentReport[] = [
-  { id: "rep_001", businessId: "biz_001", department: "sales", status: "review_ready", value: 2400000, evidenceCount: 5 },
+  { id: "rep_001", businessId: "biz_001", department: "sales", kpiKey: "monthly_sales_value", status: "review_ready", value: 2400000, evidenceCount: 5 },
   { id: "rep_002", businessId: "biz_001", department: "finance", status: "submitted", value: 2300000, evidenceCount: 4 },
   { id: "rep_003", businessId: "biz_002", department: "sales", status: "submitted", value: 1900000, evidenceCount: 2 },
   { id: "rep_004", businessId: "biz_002", department: "finance", status: "draft", value: 1200000, evidenceCount: 0 },
@@ -189,6 +192,8 @@ export const institutionAccess: InstitutionAccess[] = [
   }
 ];
 
+export const auditEvents: AuditEvent[] = [];
+
 export const departments: Department[] = [
   {
     id: "dept_001",
@@ -217,6 +222,27 @@ export const kpiTargets: KpiTarget[] = [
     createdAt: "2026-05-18T08:00:00.000Z"
   }
 ];
+
+export const businessKpis: BusinessKpi[] = DEFAULT_SALES_KPIS.map((kpi, index) => ({
+  id: `bkpi_sales_${String(index + 1).padStart(2, "0")}`,
+  businessId: "biz_001",
+  departmentId: "dept_001",
+  kpiKey: kpi.key,
+  name: kpi.name,
+  description: kpi.description,
+  measurementType: kpi.measurementType,
+  unit: kpi.unit,
+  targetValue: kpi.key === "monthly_sales_value" ? 2500000 : kpi.unit === "%" ? 95 : null,
+  defaultFrequency: kpi.defaultFrequency,
+  evidenceRequirements: kpi.evidenceRequirements,
+  icRuleLinks: kpi.icRuleLinks,
+  scoreFactorLinks: kpi.scoreFactorLinks,
+  isDefault: true,
+  isActive: true,
+  createdBy: "usr_ceo_001",
+  createdAt: "2026-05-18T08:00:00.000Z",
+  updatedAt: "2026-05-18T08:00:00.000Z"
+}));
 
 export const assessmentResults: AssessmentResult[] = [
   {

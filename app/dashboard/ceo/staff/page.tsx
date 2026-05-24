@@ -63,6 +63,7 @@ export default async function CeoStaffPage({ searchParams }: CeoStaffPageProps) 
                 <option value="procurement_officer">Procurement Officer</option>
                 <option value="operations_officer">Operations Officer</option>
                 <option value="hr_admin">HR/Admin Officer</option>
+                <option value="department_head">Departmental Head</option>
               </select>
             </label>
             <button className="button primary" type="submit" disabled={!business || assignableDepartments.length === 0}>

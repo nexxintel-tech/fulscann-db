@@ -5,6 +5,7 @@ import type {
   DepartmentReport,
   EvidenceFile,
   KpiTarget,
+  BusinessKpi,
   StaffInvitation
 } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export function getOnboardingFormSuggestions(input: {
   business?: Business;
   departments: Department[];
   kpiTargets: KpiTarget[];
+  businessKpis?: BusinessKpi[];
 }): SmartFormSuggestion[] {
   const suggestions: SmartFormSuggestion[] = [];
 
@@ -50,7 +52,11 @@ export function getOnboardingFormSuggestions(input: {
     }
   }
 
-  if (!input.kpiTargets.some((kpi) => /sales|finance|match/i.test(kpi.name))) {
+  const salesFinanceKpiExists =
+    input.kpiTargets.some((kpi) => /sales|finance|match/i.test(kpi.name)) ||
+    input.businessKpis?.some((kpi) => kpi.kpiKey === "sales_to_finance_match_rate");
+
+  if (!salesFinanceKpiExists) {
     suggestions.push({
       id: "sales-finance-kpi",
       title: "Add a Sales-to-Finance Match Rate KPI",
@@ -92,6 +98,7 @@ export function getStaffReportSuggestions(input: {
   reports: DepartmentReport[];
   evidenceFiles: EvidenceFile[];
   exceptions: ControlException[];
+  businessKpis?: BusinessKpi[];
 }): SmartFormSuggestion[] {
   if (!input.department) {
     return [{
@@ -142,12 +149,17 @@ export function getStaffReportSuggestions(input: {
     });
   }
 
+  if (input.department.departmentType === "sales") {
+    suggestions.push(...getSalesKpiReportingSuggestions(input));
+  }
+
   return suggestions;
 }
 
 export function getEvidenceUploadSuggestions(input: {
   report?: DepartmentReport;
   exceptions: ControlException[];
+  businessKpis?: BusinessKpi[];
 }): SmartFormSuggestion[] {
   if (!input.report) {
     return [{
@@ -185,6 +197,92 @@ export function getEvidenceUploadSuggestions(input: {
       title: "Prioritize evidence tied to open exceptions",
       detail: "Evidence added after an exception triggers a recheck and can support score recovery.",
       priority: "high"
+    });
+  }
+
+  if (input.report.department === "sales") {
+    suggestions.push({
+      id: "sales-invoice-evidence",
+      title: "Attach invoice evidence for Sales KPIs",
+      detail: "Monthly Sales Value and Invoice Completion Rate need invoices before the report is review-ready.",
+      field: "fileType",
+      recommendedValue: "invoice",
+      priority: "high"
+    });
+
+    if (!input.businessKpis?.some((kpi) => kpi.kpiKey === "sales_to_inventory_match_rate" && kpi.isActive)) {
+      return suggestions;
+    }
+
+    suggestions.push({
+      id: "sales-inventory-delivery-evidence",
+      title: "Add stock or delivery evidence",
+      detail: "Sales-to-Inventory Match Rate needs inventory movement, delivery, or service completion evidence.",
+      field: "fileType",
+      recommendedValue: "delivery_note",
+      priority: "medium"
+    });
+  }
+
+  return suggestions;
+}
+
+function getSalesKpiReportingSuggestions(input: {
+  reports: DepartmentReport[];
+  evidenceFiles: EvidenceFile[];
+  exceptions: ControlException[];
+  businessKpis?: BusinessKpi[];
+}): SmartFormSuggestion[] {
+  const suggestions: SmartFormSuggestion[] = [];
+  const activeKpiKeys = new Set(input.businessKpis?.filter((kpi) => kpi.isActive).map((kpi) => kpi.kpiKey) ?? []);
+  const latestSalesReport = input.reports.at(-1);
+
+  if (latestSalesReport && input.evidenceFiles.length === 0 && activeKpiKeys.has("invoice_completion_rate")) {
+    suggestions.push({
+      id: "sales-kpi-missing-invoices",
+      title: "Upload invoices for reported sales",
+      detail: "Monthly Sales Value without invoice evidence can trigger Sales evidence quality exceptions.",
+      priority: "high"
+    });
+  }
+
+  if (
+    latestSalesReport &&
+    input.exceptions.some((exception) => exception.title.toLowerCase().includes("sales-finance mismatch")) &&
+    activeKpiKeys.has("sales_to_finance_match_rate")
+  ) {
+    suggestions.push({
+      id: "sales-kpi-finance-mismatch-warning",
+      title: "Finance inflow is lower than Sales",
+      detail: "A Sales-Finance mismatch may be created unless timing or payment evidence explains the gap.",
+      priority: "high"
+    });
+  }
+
+  if (activeKpiKeys.has("sales_to_inventory_match_rate")) {
+    suggestions.push({
+      id: "sales-kpi-inventory-evidence",
+      title: "Link stock or service delivery evidence",
+      detail: "Sales-to-Inventory Match Rate needs delivery notes, inventory movement, or service completion evidence.",
+      priority: "medium"
+    });
+  }
+
+  if (activeKpiKeys.has("customer_traceability_rate")) {
+    suggestions.push({
+      id: "sales-kpi-customer-traceability",
+      title: "Add customer traceability details",
+      detail: "Customer name, customer code, order reference, or invoice reference improves traceability.",
+      priority: "medium"
+    });
+  }
+
+  if (activeKpiKeys.has("outstanding_receivables")) {
+    suggestions.push({
+      id: "sales-kpi-receivables-followup",
+      title: "Tag unpaid invoices and collection dates",
+      detail: "High outstanding receivables should include unpaid invoice references and expected collection dates.",
+      priority: "medium"
     });
   }
 

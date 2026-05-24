@@ -1,4 +1,5 @@
 import type { BusinessUser, StaffInvitation } from "@/lib/types";
+import { isDepartmentMember } from "@/lib/staff/roles";
 
 export function findStaffInvitationByToken(invitations: StaffInvitation[], token: string) {
   return invitations.find((invitation) => invitation.invitationToken === token) ?? null;
@@ -13,9 +14,7 @@ export function canAcceptStaffInvitation(invitation: StaffInvitation | null, ema
 }
 
 export function getActiveStaffMembership(memberships: BusinessUser[], userId?: string) {
-  const activeStaff = memberships.filter(
-    (membership) => membership.status === "active" && membership.role !== "ceo" && Boolean(membership.departmentId)
-  );
+  const activeStaff = memberships.filter(isDepartmentMember);
 
   if (!userId) {
     return activeStaff[0] ?? null;

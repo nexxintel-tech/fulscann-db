@@ -32,7 +32,8 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
     analystNotes,
     ceoResponses,
     institutionAccess,
-    icScoreResults
+    icScoreResults,
+    businessKpis
   } = await getPlatformSnapshot();
   const business = businesses[0];
 
@@ -41,6 +42,17 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
   }
 
   const reports = departmentReports.filter((report) => report.businessId === business.id);
+  const salesReports = reports.filter((report) => report.department === "sales");
+  const salesKpis = businessKpis.filter((kpi) => kpi.businessId === business.id && kpi.isActive && kpi.kpiKey.startsWith("sales"));
+  const monthlySalesKpi = salesKpis.find((kpi) => kpi.kpiKey === "monthly_sales_value");
+  const salesFinanceKpi = salesKpis.find((kpi) => kpi.kpiKey === "sales_to_finance_match_rate");
+  const salesInventoryKpi = salesKpis.find((kpi) => kpi.kpiKey === "sales_to_inventory_match_rate");
+  const receivablesKpi = salesKpis.find((kpi) => kpi.kpiKey === "outstanding_receivables");
+  const latestSalesReport = salesReports.at(-1);
+  const salesReportEvidence = evidenceFiles.filter((evidence) => salesReports.some((report) => report.id === evidence.reportId));
+  const salesLinkedExceptions = controlExceptions.filter(
+    (exception) => exception.businessId === business.id && exception.title.toLowerCase().includes("sales")
+  );
   const exceptions = controlExceptions.filter((exception) => exception.businessId === business.id);
   const openExceptions = getOpenExceptions(controlExceptions, business.id);
   const clarificationRequests = getOpenClarificationRequests(analystNotes, business.id);
@@ -78,6 +90,19 @@ export default async function CeoDashboard({ searchParams }: CeoDashboardProps) 
       <section className="card" id="integrity-report-sharing">
         <h2>IC action queue</h2>
         <IcActionTable rows={icActionQueue} />
+      </section>
+
+      <section className="grid grid-3">
+        <StatCard
+          label="Monthly Sales Value"
+          value={latestSalesReport ? `NGN ${latestSalesReport.value.toLocaleString("en-NG")}` : "No report"}
+          detail={monthlySalesKpi?.targetValue ? `Target NGN ${monthlySalesKpi.targetValue.toLocaleString("en-NG")}` : "No target set"}
+        />
+        <StatCard label="Sales evidence" value={salesReportEvidence.length} detail="Evidence files linked to Sales reports" />
+        <StatCard label="Sales-linked IC exceptions" value={salesLinkedExceptions.length} detail="Open or reviewed Sales exceptions" />
+        <StatCard label="Sales-Finance Match Rate" value={salesFinanceKpi?.targetValue ? `${salesFinanceKpi.targetValue}% target` : "Target unset"} detail="Connected to mismatch checks" />
+        <StatCard label="Sales-Inventory Match Rate" value={salesInventoryKpi?.targetValue ? `${salesInventoryKpi.targetValue}% target` : "Target unset"} detail="Connected to inventory evidence checks" />
+        <StatCard label="Outstanding Receivables" value={receivablesKpi?.targetValue ? `NGN ${receivablesKpi.targetValue.toLocaleString("en-NG")}` : "Target unset"} detail="Unpaid Sales follow-up threshold" />
       </section>
 
       <section className="grid grid-2">

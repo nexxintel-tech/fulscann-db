@@ -9,12 +9,14 @@ import type {
   Department,
   DepartmentReport,
   KpiTarget,
+  BusinessKpi,
   AssessmentResult,
   BusinessUser,
   StaffInvitation,
   IcScoreResult,
   EvidenceFile,
-  InstitutionAccess
+  InstitutionAccess,
+  AuditEvent
 } from "@/lib/types";
 
 type BusinessRow = {
@@ -59,6 +61,7 @@ type DepartmentReportRow = {
   id: string;
   business_id: string;
   department: "sales" | "finance" | "procurement" | "operations" | "hr";
+  kpi_key?: string | null;
   status: "draft" | "submitted" | "review_ready" | "approved";
   value: number;
   evidence_count: number;
@@ -104,6 +107,17 @@ type InstitutionAccessRow = {
   created_at: string;
 };
 
+type AuditEventRow = {
+  id: string;
+  business_id: string | null;
+  actor_user_id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
 type DepartmentRow = {
   id: string;
   business_id: string;
@@ -120,6 +134,27 @@ type KpiTargetRow = {
   unit: string;
   period: KpiTarget["period"];
   created_at: string;
+};
+
+type BusinessKpiRow = {
+  id: string;
+  business_id: string;
+  department_id: string | null;
+  kpi_key: string;
+  name: string;
+  description: string | null;
+  measurement_type: BusinessKpi["measurementType"];
+  unit: string | null;
+  target_value: number | null;
+  default_frequency: BusinessKpi["defaultFrequency"];
+  evidence_requirements: unknown;
+  ic_rule_links: unknown;
+  score_factor_links: unknown;
+  is_default: boolean;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type AssessmentResultRow = {
@@ -225,6 +260,7 @@ export function mapDepartmentReport(row: DepartmentReportRow): DepartmentReport 
     id: row.id,
     businessId: row.business_id,
     department: row.department,
+    kpiKey: row.kpi_key ?? null,
     status: row.status,
     value: row.value,
     evidenceCount: row.evidence_count
@@ -279,6 +315,19 @@ export function mapInstitutionAccess(row: InstitutionAccessRow): InstitutionAcce
   };
 }
 
+export function mapAuditEvent(row: AuditEventRow): AuditEvent {
+  return {
+    id: row.id,
+    businessId: row.business_id,
+    actorUserId: row.actor_user_id,
+    eventType: row.event_type,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at
+  };
+}
+
 export function mapDepartment(row: DepartmentRow): Department {
   return {
     id: row.id,
@@ -298,6 +347,29 @@ export function mapKpiTarget(row: KpiTargetRow): KpiTarget {
     unit: row.unit,
     period: row.period,
     createdAt: row.created_at
+  };
+}
+
+export function mapBusinessKpi(row: BusinessKpiRow): BusinessKpi {
+  return {
+    id: row.id,
+    businessId: row.business_id,
+    departmentId: row.department_id,
+    kpiKey: row.kpi_key,
+    name: row.name,
+    description: row.description,
+    measurementType: row.measurement_type,
+    unit: row.unit,
+    targetValue: row.target_value === null ? null : Number(row.target_value),
+    defaultFrequency: row.default_frequency,
+    evidenceRequirements: toStringArray(row.evidence_requirements),
+    icRuleLinks: toStringArray(row.ic_rule_links),
+    scoreFactorLinks: toStringArray(row.score_factor_links),
+    isDefault: row.is_default,
+    isActive: row.is_active,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
 
@@ -377,4 +449,8 @@ function getDaysAgo(value?: string | null) {
   }
 
   return Math.max(Math.floor((now - then) / 86_400_000), 0);
+}
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }

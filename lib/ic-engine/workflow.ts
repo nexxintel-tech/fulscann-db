@@ -40,12 +40,8 @@ export async function runIcAutomationForBusiness(input: {
   }
 
   const supabase = createSupabaseAdminClient();
-  const [reportResult, exceptionResult, evidenceResult, businessResult] = await Promise.all([
-    supabase
-      .from("department_reports")
-      .select("id, business_id, department, status, value, evidence_count")
-      .eq("business_id", input.businessId)
-      .order("created_at", { ascending: true }),
+  const [reportRows, exceptionResult, evidenceResult, businessResult] = await Promise.all([
+    fetchDepartmentReportsForIc(input.businessId),
     supabase
       .from("control_exceptions")
       .select("id, business_id, title, risk_level, status, created_at")
@@ -61,18 +57,23 @@ export async function runIcAutomationForBusiness(input: {
       .single()
   ]);
 
-  if (reportResult.error || exceptionResult.error || evidenceResult.error || businessResult.error) {
+  if (exceptionResult.error || evidenceResult.error || businessResult.error) {
     return null;
   }
 
-  const reports: DepartmentReport[] = (reportResult.data ?? []).map((row) => ({
-    id: row.id,
-    businessId: row.business_id,
-    department: row.department,
-    status: row.status,
-    value: Number(row.value),
-    evidenceCount: row.evidence_count
-  }));
+  const reports: DepartmentReport[] = reportRows.map((row) => {
+    const kpiKey = "kpi_key" in row && typeof row.kpi_key === "string" ? row.kpi_key : null;
+
+    return {
+      id: row.id,
+      businessId: row.business_id,
+      department: row.department,
+      kpiKey,
+      status: row.status,
+      value: Number(row.value),
+      evidenceCount: row.evidence_count
+    };
+  });
   const exceptions: ControlException[] = (exceptionResult.data ?? []).map((row) => ({
     id: row.id,
     businessId: row.business_id,
@@ -194,4 +195,34 @@ export async function runIcAutomationForBusiness(input: {
     newExceptionCount: plan.exceptionCandidatesToCreate.length,
     suppressedExceptionCount: plan.suppressedExceptionCandidates.length
   };
+}
+
+async function fetchDepartmentReportsForIc(businessId: string) {
+  const supabase = createSupabaseAdminClient();
+  const result = await supabase
+    .from("department_reports")
+    .select("id, business_id, department, kpi_key, status, value, evidence_count")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: true });
+
+  if (!result.error) {
+    return result.data ?? [];
+  }
+
+  if (!isMissingKpiSchemaError(result.error)) {
+    return [];
+  }
+
+  const fallback = await supabase
+    .from("department_reports")
+    .select("id, business_id, department, status, value, evidence_count")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: true });
+
+  return fallback.data ?? [];
+}
+
+function isMissingKpiSchemaError(error: { message: string }) {
+  const message = error.message.toLowerCase();
+  return message.includes("department_reports.kpi_key") || message.includes("kpi_key") || message.includes("schema cache");
 }

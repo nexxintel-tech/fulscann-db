@@ -46,6 +46,7 @@ type SidebarRoleKey = PlatformRole | BusinessAccessPersona;
 export function getRoleLabel(role: PlatformRole, businessPersona?: BusinessAccessPersona) {
   if (role === "super_admin") return "Fulscann Super Admin";
   if (role === "analyst") return "Fulscann Analyst";
+  if (role === "business_user" && businessPersona === "department_head") return "Departmental Head";
   if (role === "business_user" && businessPersona === "staff") return "Staff";
   if (role === "business_user") return "Business CEO";
   return "Institution User";
@@ -67,6 +68,10 @@ function getDefaultWorkspace(role: SidebarRoleKey): DashboardWorkspaceContext {
 
   if (role === "institution_user") {
     return { label: "Workspace", value: "Institution access", detail: "CEO-granted report visibility" };
+  }
+
+  if (role === "department_head") {
+    return { label: "Workspace", value: "Department workspace", detail: "Departmental compliance coordination" };
   }
 
   if (role === "staff") {
@@ -97,6 +102,18 @@ function getRoleNavigation(role: SidebarRoleKey): DashboardSidebarLink[] {
     return [
       { label: "Institution dashboard", href: "/institution" },
       { label: "Approved reports", href: "/institution#approved-reports" }
+    ];
+  }
+
+  if (role === "department_head") {
+    return [
+      { label: "Department workspace", href: "/dashboard/staff" },
+      { label: "Department reports", href: "/dashboard/staff#department-reports" },
+      { label: "Missing evidence", href: "/dashboard/staff#missing-evidence" },
+      { label: "Department IC issues", href: "/dashboard/staff#department-ic-issues" },
+      { label: "Correction requests", href: "/dashboard/staff#returned-corrections" },
+      { label: "Staff compliance", href: "/dashboard/staff#staff-compliance" },
+      { label: "Ready for review", href: "/dashboard/staff#ready-for-review" }
     ];
   }
 
@@ -136,6 +153,14 @@ function getRoleQuickActions(role: SidebarRoleKey): DashboardSidebarLink[] {
 
   if (role === "institution_user") {
     return [{ label: "View approved reports", href: "/institution#approved-reports" }];
+  }
+
+  if (role === "department_head") {
+    return [
+      { label: "Request correction", href: "/dashboard/staff#department-head-actions" },
+      { label: "Mark ready for review", href: "/dashboard/staff#ready-for-review" },
+      { label: "Escalate to CEO", href: "/dashboard/staff#department-head-actions" }
+    ];
   }
 
   if (role === "staff") {

@@ -16,7 +16,7 @@ export default async function StaffLayout({ children }: Readonly<{ children: Rea
     userId: profile.id
   });
 
-  if (businessContext.persona !== "staff") {
+  if (businessContext.persona !== "staff" && businessContext.persona !== "department_head") {
     redirect("/dashboard/ceo");
   }
 
@@ -29,7 +29,7 @@ export default async function StaffLayout({ children }: Readonly<{ children: Rea
 
   return (
     <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, "staff")} />
+      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} />
       <div className="dashboard-content">{children}</div>
     </div>
   );
