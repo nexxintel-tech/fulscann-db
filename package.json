@@ -1,11 +1,12 @@
 {
   "name": "fulscann-db",
   "version": "0.1.0",
-  "private": true,
+    "private": true,
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "supabase:bootstrap-auth": "node scripts/bootstrap-auth-users.mjs",
     "supabase:bootstrap-secure-test-data": "node scripts/bootstrap-secure-test-data.mjs",
     "supabase:verify": "node scripts/verify-supabase.mjs",
