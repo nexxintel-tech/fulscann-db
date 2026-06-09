@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import type { DashboardSidebarModel } from "@/lib/navigation/secondary-sidebar";
 
-export function SecondarySidebar({ model }: { model: DashboardSidebarModel }) {
+export function SecondarySidebar({ model, currentPath }: { model: DashboardSidebarModel; currentPath?: string }) {
   return (
     <aside className="secondary-sidebar" aria-label="Dashboard profile and navigation">
       <section className="sidebar-section profile-block">
@@ -20,8 +20,13 @@ export function SecondarySidebar({ model }: { model: DashboardSidebarModel }) {
         {model.workspace.detail ? <p>{model.workspace.detail}</p> : null}
       </section>
 
-      <SidebarLinks title="Navigation" links={model.navigation} />
-      <SidebarLinks title="Quick actions" links={model.quickActions} />
+      <SidebarLinks title="Navigation" links={model.navigation} currentPath={currentPath} />
+      <SidebarLinks title="Quick actions" links={model.quickActions} currentPath={currentPath} />
+
+      <section className="sidebar-trust-card">
+        <strong>Trust intelligence</strong>
+        <span>CEO-owned approvals, analyst oversight, and control signals stay role-bound.</span>
+      </section>
 
       <section className="sidebar-section account-actions">
         <h2>Account</h2>
@@ -35,15 +40,20 @@ export function SecondarySidebar({ model }: { model: DashboardSidebarModel }) {
   );
 }
 
-function SidebarLinks({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+function SidebarLinks({ title, links, currentPath }: { title: string; links: { label: string; href: string }[]; currentPath?: string }) {
   return (
     <section className="sidebar-section sidebar-links">
       <h2>{title}</h2>
-      {links.map((link) => (
-        <a key={`${title}-${link.href}-${link.label}`} href={link.href}>
-          {link.label}
-        </a>
-      ))}
+      {links.map((link) => {
+        const baseHref = link.href.split("#")[0];
+        const isActive = currentPath ? baseHref === currentPath : false;
+
+        return (
+          <a className={isActive ? "active" : undefined} key={`${title}-${link.href}-${link.label}`} href={link.href}>
+            {link.label}
+          </a>
+        );
+      })}
     </section>
   );
 }

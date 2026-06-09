@@ -7,7 +7,7 @@ export default async function SuperAdminLayout({ children }: Readonly<{ children
   const profile = await requireRole(["super_admin"]);
   return (
     <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile)} />
+      <SecondarySidebar model={getDashboardSidebarModel(profile)} currentPath="/dashboard/super-admin" />
       <div className="dashboard-content">{children}</div>
     </div>
   );

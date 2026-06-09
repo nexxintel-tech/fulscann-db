@@ -26,7 +26,7 @@ export default async function CeoLayout({ children }: Readonly<{ children: React
 
   return (
     <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} />
+      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} currentPath="/dashboard/ceo" />
       <div className="dashboard-content">{children}</div>
     </div>
   );

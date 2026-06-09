@@ -7,7 +7,7 @@ export default async function AnalystLayout({ children }: Readonly<{ children: R
   const profile = await requireRole(["analyst"]);
   return (
     <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile)} />
+      <SecondarySidebar model={getDashboardSidebarModel(profile)} currentPath="/dashboard/analyst" />
       <div className="dashboard-content">{children}</div>
     </div>
   );

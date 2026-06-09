@@ -29,7 +29,7 @@ export default async function StaffLayout({ children }: Readonly<{ children: Rea
 
   return (
     <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} />
+      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} currentPath="/dashboard/staff" />
       <div className="dashboard-content">{children}</div>
     </div>
   );

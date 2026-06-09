@@ -24,14 +24,14 @@ export function IcActionTable({ rows }: IcActionTableProps) {
               <br />
               {row.business.sector}
             </td>
-            <td>{row.latestIcScore}</td>
-            <td>{formatDelta(row.scoreDelta)}</td>
+            <td><span className="pill blue">{row.latestIcScore}</span></td>
+            <td><span className={row.scoreDelta < 0 ? "pill yellow" : "pill green"}>{formatDelta(row.scoreDelta)}</span></td>
             <td>
               {row.openExceptionCount} open
               <br />
               {row.highRiskExceptionCount} high-risk
             </td>
-            <td>{row.actionLabel}</td>
+            <td><span className="pill purple">{row.actionLabel}</span></td>
           </tr>
         ))}
         {rows.length === 0 ? (

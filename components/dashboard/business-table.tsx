@@ -30,15 +30,19 @@ export function BusinessTable({ rows }: BusinessTableProps) {
               </td>
               <td>{row.business.onboardingProgress}%</td>
               <td>
-                VeriScore {row.business.currentVeriScore}
+                <span className="pill green">VeriScore {row.business.currentVeriScore}</span>
                 <br />
-                IC {row.business.currentIcScore}
+                <span className="pill blue">IC {row.business.currentIcScore}</span>
               </td>
               <td>{row.business.evidenceCompletion}%</td>
               <td>
                 <RiskPill level={riskLevel} />
               </td>
-              <td>{row.needsIntervention ? "Needs analyst review" : "Report-ready"}</td>
+              <td>
+                <span className={`pill ${row.needsIntervention ? "yellow" : "green"}`}>
+                  {row.needsIntervention ? "Needs analyst review" : "Report-ready"}
+                </span>
+              </td>
             </tr>
           );
         })}
