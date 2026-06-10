@@ -1,3 +1,5 @@
+import { MetricCard } from "@/components/ui/MetricCard";
+
 type StatCardProps = {
   label: string;
   value: string | number;
@@ -5,11 +7,5 @@ type StatCardProps = {
 };
 
 export function StatCard({ label, value, detail }: StatCardProps) {
-  return (
-    <section className="card metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {detail ? <p>{detail}</p> : null}
-    </section>
-  );
+  return <MetricCard helperText={detail} label={label} value={value} />;
 }

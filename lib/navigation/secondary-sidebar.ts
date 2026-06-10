@@ -84,55 +84,68 @@ function getDefaultWorkspace(role: SidebarRoleKey): DashboardWorkspaceContext {
 function getRoleNavigation(role: SidebarRoleKey): DashboardSidebarLink[] {
   if (role === "super_admin") {
     return [
-      { label: "Super Admin dashboard", href: "/dashboard/super-admin" },
-      { label: "Analyst workload", href: "/dashboard/super-admin#analyst-workload" },
-      { label: "Escalations", href: "/dashboard/super-admin#escalations" }
+      { label: "Dashboard", href: "/dashboard/super-admin" },
+      { label: "Platform Risk", href: "/dashboard/super-admin#escalations" },
+      { label: "Analysts", href: "/dashboard/super-admin#analyst-workload" },
+      { label: "Business Assignments", href: "/dashboard/super-admin#assign-analyst" },
+      { label: "Escalations", href: "/dashboard/super-admin#escalations" },
+      { label: "Settings", href: "/login" }
     ];
   }
 
   if (role === "analyst") {
     return [
-      { label: "Analyst dashboard", href: "/dashboard/analyst" },
-      { label: "IC review queue", href: "/dashboard/analyst#ic-review" },
-      { label: "Exception actions", href: "/dashboard/analyst#exception-actions" }
+      { label: "Dashboard", href: "/dashboard/analyst" },
+      { label: "Assigned Businesses", href: "/dashboard/analyst#analyst-actions" },
+      { label: "Review Queue", href: "/dashboard/analyst#ic-review" },
+      { label: "Clarifications", href: "/dashboard/analyst#analyst-actions" },
+      { label: "Escalations", href: "/dashboard/analyst#exception-actions" },
+      { label: "Settings", href: "/login" }
     ];
   }
 
   if (role === "institution_user") {
     return [
-      { label: "Institution dashboard", href: "/institution" },
-      { label: "Approved reports", href: "/institution#approved-reports" }
+      { label: "Dashboard", href: "/institution" },
+      { label: "Approved Reports", href: "/institution#approved-reports" },
+      { label: "Risk Signals", href: "/institution#risk-signals" },
+      { label: "Businesses", href: "/institution#approved-reports" },
+      { label: "Access History", href: "/institution#access-history" },
+      { label: "Settings", href: "/login" }
     ];
   }
 
   if (role === "department_head") {
     return [
-      { label: "Department workspace", href: "/dashboard/staff" },
-      { label: "Department reports", href: "/dashboard/staff#department-reports" },
-      { label: "Missing evidence", href: "/dashboard/staff#missing-evidence" },
-      { label: "Department IC issues", href: "/dashboard/staff#department-ic-issues" },
-      { label: "Correction requests", href: "/dashboard/staff#returned-corrections" },
-      { label: "Staff compliance", href: "/dashboard/staff#staff-compliance" },
-      { label: "Ready for review", href: "/dashboard/staff#ready-for-review" }
+      { label: "Dashboard", href: "/dashboard/staff" },
+      { label: "Department Reports", href: "/dashboard/staff#department-reports" },
+      { label: "Evidence Gaps", href: "/dashboard/staff#missing-evidence" },
+      { label: "Corrections", href: "/dashboard/staff#returned-corrections" },
+      { label: "Team Compliance", href: "/dashboard/staff#staff-compliance" },
+      { label: "Department Issues", href: "/dashboard/staff#department-ic-issues" },
+      { label: "Settings", href: "/login" }
     ];
   }
 
   if (role === "staff") {
     return [
-      { label: "Staff workspace", href: "/dashboard/staff" },
-      { label: "Submit department report", href: "/dashboard/staff#submit-report" },
-      { label: "Upload evidence", href: "/dashboard/staff#upload-evidence" },
-      { label: "Returned corrections", href: "/dashboard/staff#returned-corrections" },
-      { label: "Department IC issues", href: "/dashboard/staff#department-ic-issues" },
-      { label: "Suggestions", href: "/dashboard/staff#staff-suggestions" }
+      { label: "Dashboard", href: "/dashboard/staff" },
+      { label: "Submit Report", href: "/dashboard/staff#submit-report" },
+      { label: "Evidence", href: "/dashboard/staff#upload-evidence" },
+      { label: "Corrections", href: "/dashboard/staff#returned-corrections" },
+      { label: "Department Issues", href: "/dashboard/staff#department-ic-issues" },
+      { label: "Settings", href: "/login" }
     ];
   }
 
   return [
-    { label: "CEO dashboard", href: "/dashboard/ceo" },
+    { label: "Dashboard", href: "/dashboard/ceo" },
     { label: "Onboarding", href: "/dashboard/ceo/onboarding" },
-    { label: "Staff management", href: "/dashboard/ceo/staff" },
-    { label: "Integrity Report sharing", href: "/dashboard/ceo#integrity-report-sharing" }
+    { label: "KPIs & Departments", href: "/dashboard/ceo/onboarding" },
+    { label: "Staff", href: "/dashboard/ceo/staff" },
+    { label: "IC Issues", href: "/dashboard/ceo#integrity-report-sharing" },
+    { label: "Integrity Report", href: "/dashboard/ceo#integrity-report-sharing" },
+    { label: "Settings", href: "/login" }
   ];
 }
 

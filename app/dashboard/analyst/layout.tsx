@@ -1,14 +1,23 @@
 import type { ReactNode } from "react";
-import { SecondarySidebar } from "@/components/dashboard/secondary-sidebar";
+import { AppShell } from "@/components/layout/AppShell";
 import { requireRole } from "@/lib/auth/session";
 import { getDashboardSidebarModel } from "@/lib/navigation/secondary-sidebar";
 
 export default async function AnalystLayout({ children }: Readonly<{ children: ReactNode }>) {
   const profile = await requireRole(["analyst"]);
+  const sidebarModel = getDashboardSidebarModel(profile);
+
   return (
-    <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile)} currentPath="/dashboard/analyst" />
-      <div className="dashboard-content">{children}</div>
-    </div>
+    <AppShell
+      activeRoute="/dashboard/analyst"
+      navigationItems={sidebarModel.navigation}
+      quickActions={sidebarModel.quickActions}
+      roleLabel={sidebarModel.roleLabel}
+      userName={sidebarModel.profile.fullName}
+      workspaceDetail={sidebarModel.workspace.detail}
+      workspaceName={sidebarModel.workspace.value}
+    >
+      {children}
+    </AppShell>
   );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,20 +12,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en">
       <body>
         <div className="shell">
-          <header className="topbar">
-            <Link href="/" className="brand">
-              <strong>Fulscann-DB</strong>
-              <span>Trust, risk, readiness, and ranking intelligence</span>
-            </Link>
-            <nav className="nav" aria-label="Primary navigation">
-              <Link href="/dashboard/super-admin">Super Admin</Link>
-              <Link href="/dashboard/analyst">Analyst</Link>
-              <Link href="/dashboard/ceo">CEO</Link>
-              <Link href="/dashboard/staff">Staff</Link>
-              <Link href="/institution">Institution</Link>
-              <Link href="/ic">IC Test</Link>
-            </nav>
-          </header>
           <main className="main">{children}</main>
         </div>
       </body>

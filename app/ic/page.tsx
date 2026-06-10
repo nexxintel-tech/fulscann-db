@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DemoBanner } from "@/components/demo/demo-banner";
+import { AppShell } from "@/components/layout/AppShell";
 import { StatCard } from "@/components/ui/stat-card";
 import { runBusinessIcAutomation } from "@/lib/ic-engine/automation";
 import { IC_RULE_REGISTRY } from "@/lib/ic-engine/rules";
@@ -33,17 +34,33 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
     evidenceCompletion,
     evidenceFiles: scenario.evidenceFiles
   });
+  const icNavigation = [
+    { label: "IC Workbench", href: "/ic" },
+    { label: "Scenario Test", href: "/ic#scenario-test" },
+    { label: "Rule Registry", href: "/ic#rule-registry" },
+    { label: "Score Factors", href: "/ic#score-factors" },
+    { label: "Lifecycle Preview", href: "/ic#lifecycle-preview" }
+  ];
 
   return (
-    <div className="stack">
-      <DemoBanner role="IC mechanism" />
-      <section className="page-title">
-        <h1>IC mechanism test</h1>
-        <p>Run internal control checks without authentication or database writes.</p>
-        <p>Scenario: {scenario.name}. {scenario.description}</p>
-      </section>
+    <AppShell
+      activeRoute="/ic"
+      navigationItems={icNavigation}
+      roleLabel="IC Workbench"
+      searchPlaceholder="Search scenarios, rules, score factors..."
+      userName="Fulscann IC"
+      workspaceDetail="Scenario testing without database writes"
+      workspaceName="Control test bench"
+    >
+      <div className="stack">
+        <DemoBanner role="IC mechanism" />
+        <section className="page-title">
+          <h1>IC mechanism test</h1>
+          <p>Run internal control checks without authentication or database writes.</p>
+          <p>Scenario: {scenario.name}. {scenario.description}</p>
+        </section>
 
-      <section className="grid grid-3">
+      <section className="grid grid-3" id="scenario-test">
         {IC_WORKBENCH_SCENARIOS.map((item) => (
           <Link key={item.id} className="button" href={`/ic?scenario=${item.id}`}>
             {item.name}
@@ -51,7 +68,7 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
         ))}
       </section>
 
-      <section className="card">
+      <section className="card" id="rule-registry">
         <h2>Rule registry</h2>
         <table className="table">
           <thead>
@@ -130,7 +147,7 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
           </section>
 
           <section className="grid grid-2">
-            <article className="card">
+            <article className="card" id="score-factors">
               <h2>Score factors</h2>
               <table className="table">
                 <tbody>
@@ -144,7 +161,7 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
               </table>
             </article>
 
-            <article className="card">
+            <article className="card" id="lifecycle-preview">
               <h2>Exception lifecycle</h2>
               <ul className="list">
                 {result.exceptionLifecycle.map((review) => (
@@ -165,7 +182,8 @@ export default async function IcDemoPage({ searchParams }: IcDemoPageProps) {
           <p>Sales and finance reports are both required.</p>
         </section>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

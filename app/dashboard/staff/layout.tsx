@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { SecondarySidebar } from "@/components/dashboard/secondary-sidebar";
+import { AppShell } from "@/components/layout/AppShell";
 import { requireRole } from "@/lib/auth/session";
 import { getBusinessAccessContext } from "@/lib/auth/business-access";
 import { getPlatformSnapshot } from "@/lib/data/repository";
@@ -26,11 +26,19 @@ export default async function StaffLayout({ children }: Readonly<{ children: Rea
       ? `Department: ${businessContext.department.name}`
       : "Assigned department reporting"
   };
+  const sidebarModel = getDashboardSidebarModel(profile, workspace, businessContext.persona);
 
   return (
-    <div className="dashboard-shell">
-      <SecondarySidebar model={getDashboardSidebarModel(profile, workspace, businessContext.persona)} currentPath="/dashboard/staff" />
-      <div className="dashboard-content">{children}</div>
-    </div>
+    <AppShell
+      activeRoute="/dashboard/staff"
+      navigationItems={sidebarModel.navigation}
+      quickActions={sidebarModel.quickActions}
+      roleLabel={sidebarModel.roleLabel}
+      userName={sidebarModel.profile.fullName}
+      workspaceDetail={sidebarModel.workspace.detail}
+      workspaceName={sidebarModel.workspace.value}
+    >
+      {children}
+    </AppShell>
   );
 }
