@@ -936,6 +936,220 @@ a {
   margin: 0;
 }
 
+.help-page {
+  align-items: flex-start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.help-nav {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  position: sticky;
+  top: 24px;
+}
+
+.help-nav strong {
+  color: var(--foreground);
+  margin-bottom: 6px;
+}
+
+.help-nav a {
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 10px;
+}
+
+.help-nav a:hover {
+  background: #e7f8f1;
+  color: var(--brand-dark);
+}
+
+.help-article {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.help-hero,
+.help-section {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+}
+
+.help-hero {
+  background:
+    linear-gradient(135deg, rgba(14, 159, 110, 0.12), rgba(224, 236, 255, 0.46)),
+    #ffffff;
+}
+
+.help-hero h1 {
+  font-size: clamp(34px, 5vw, 56px);
+  letter-spacing: 0;
+  line-height: 1.02;
+  margin: 0;
+}
+
+.help-hero p,
+.help-section-header p,
+.help-card p,
+.faq-item p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.help-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.help-section-header {
+  display: grid;
+  gap: 8px;
+}
+
+.help-section-header span {
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.help-section-header h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.12;
+  margin: 0;
+}
+
+.help-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.help-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.help-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.help-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.help-card h3 {
+  margin: 0;
+}
+
+.help-card ul,
+.help-card ol {
+  color: var(--foreground);
+  display: grid;
+  gap: 8px;
+  line-height: 1.55;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.help-card-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.boundary-note {
+  background: #f8fafc;
+  border-left: 3px solid var(--brand);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.step-list {
+  display: grid;
+  gap: 16px;
+}
+
+.step-card {
+  background: #fbfdff;
+}
+
+.emphasis-card {
+  background: #e7f8f1;
+  border-color: #b7ebd3;
+}
+
+.checklist-card li {
+  align-items: flex-start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 14px minmax(0, 1fr);
+}
+
+.checklist-card li span {
+  background: var(--brand);
+  border-radius: 999px;
+  height: 8px;
+  margin-top: 8px;
+  width: 8px;
+}
+
+.flow-list {
+  columns: 2;
+}
+
+.example-card {
+  background: #f8fbff;
+  border-color: #c7d7fe;
+}
+
+.best-practice-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.faq-item {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.faq-item summary {
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.faq-item p {
+  padding-top: 10px;
+}
+
 .button.secondary {
   background: #ffffff;
   border-color: var(--line);
@@ -1030,10 +1244,13 @@ a {
 
   .dashboard-shell,
   .app-shell,
+  .help-page,
   .institution-shell,
   .institution-portal-grid,
   .grid-2,
   .grid-3,
+  .help-grid.two,
+  .help-grid.three,
   .form-inline {
     grid-template-columns: 1fr;
   }
@@ -1064,6 +1281,21 @@ a {
 
   .workspace-content {
     padding: 18px 16px 32px;
+  }
+
+  .help-nav {
+    position: static;
+  }
+
+  .help-hero,
+  .help-section {
+    padding: 20px;
+  }
+
+  .flow-list,
+  .best-practice-list {
+    columns: 1;
+    grid-template-columns: 1fr;
   }
 
   .section-card-header,
