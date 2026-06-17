@@ -10,6 +10,7 @@ import {
   dashboardSummaries,
   evidenceByDepartment,
   faqs,
+  integrityReportSharing,
   keyTerms,
   kpiGroups,
   onboardingSections,
@@ -27,15 +28,16 @@ export const metadata: Metadata = {
 
 const sectionLinks = [
   ["Welcome", "#welcome"],
-  ["Roles", "#roles"],
-  ["Onboarding", "#onboarding"],
+  ["Roles", "#user-roles"],
+  ["Onboarding", "#onboarding-steps"],
   ["Dashboards", "#dashboards"],
-  ["KPIs", "#kpis"],
+  ["KPIs", "#kpis-and-evidence"],
   ["Evidence", "#evidence"],
   ["Exceptions", "#exceptions"],
   ["Scores", "#score-movement"],
+  ["Report Sharing", "#integrity-report-sharing"],
   ["Checklist", "#checklist"],
-  ["FAQ", "#faq"]
+  ["FAQ", "#faqs"]
 ] as const;
 
 export default function GettingStartedHelpPage() {
@@ -55,10 +57,9 @@ export default function GettingStartedHelpPage() {
             control gaps, and build trust intelligence that can be shared with approved institutions.
           </p>
           <div className="help-cta-row">
-            <ActionButton href="/dashboard/ceo" variant="primary">Go to CEO Dashboard</ActionButton>
-            <ActionButton href="/dashboard/ceo/onboarding">Set Up KPIs</ActionButton>
-            <ActionButton href="/dashboard/staff">Submit a Report</ActionButton>
-            <ActionButton href="/institution">View Approved Reports</ActionButton>
+            <ActionButton href="#onboarding-steps" variant="primary">Start with onboarding steps</ActionButton>
+            <ActionButton href="#user-roles">Understand user roles</ActionButton>
+            <ActionButton href="#kpis-and-evidence">Review KPI and evidence guide</ActionButton>
           </div>
         </section>
 
@@ -91,13 +92,13 @@ export default function GettingStartedHelpPage() {
           </div>
         </HelpSection>
 
-        <HelpSection id="roles" title="Understanding User Roles" intro="Each role sees tools and information that match its responsibility. Super Admin onboarding is not included in this guide.">
+        <HelpSection id="user-roles" title="Understanding User Roles" intro="Each role sees tools and information that match its responsibility. Super Admin onboarding is not included in this guide.">
           <div className="help-grid two">
             {roles.map((role) => <RoleCard key={role.title} role={role} />)}
           </div>
         </HelpSection>
 
-        <HelpSection id="onboarding" title="Role Onboarding" intro="Start with the steps for your role, then return to the dashboard to continue building readiness over time.">
+        <HelpSection id="onboarding-steps" title="Role Onboarding" intro="Start with the steps for your role, then return to the dashboard to continue building readiness over time.">
           <div className="step-list">
             {onboardingSections.map((section) => (
               <section className="help-card step-card" key={section.title}>
@@ -124,7 +125,7 @@ export default function GettingStartedHelpPage() {
         </HelpSection>
 
         <HelpSection
-          id="kpis"
+          id="kpis-and-evidence"
           title="Understanding KPIs"
           intro="KPIs are not just ordinary targets. They connect business goals to reports, evidence, IC validation, exceptions, score movement, and institution confidence."
         >
@@ -147,6 +148,12 @@ export default function GettingStartedHelpPage() {
                 <ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul>
               </article>
             ))}
+          </div>
+        </HelpSection>
+
+        <HelpSection id="integrity-report-sharing" title={integrityReportSharing.title}>
+          <div className="help-card emphasis-card">
+            {integrityReportSharing.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           </div>
         </HelpSection>
 
@@ -269,7 +276,7 @@ export default function GettingStartedHelpPage() {
           </div>
         </HelpSection>
 
-        <HelpSection id="faq" title="Common Questions">
+        <HelpSection id="faqs" title="Common Questions">
           <FaqAccordion faqs={faqs} />
         </HelpSection>
       </article>

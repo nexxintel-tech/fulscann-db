@@ -167,7 +167,7 @@ export const onboardingSections: HelpStepSection[] = [
     intro: "The CEO sets up the business, invites the right users, reviews control issues, and decides when external trust intelligence can be shared.",
     steps: [
       "Sign up or log in, then go to the CEO dashboard.",
-      "Create your business profile with business name, sector, location, ownership details, description, and contact information.",
+      "Create your business profile by entering the business information requested in the form, such as legal name, trading name, sector, and location. Additional profile details may be requested in later steps as the platform expands.",
       "Complete your business assessment so Fulscann-DB can understand structure, maturity, and readiness.",
       "Review your VeriScore after the assessment is submitted.",
       "Set KPIs for Sales, Finance, Procurement, Operations, HR/Admin, Evidence, and Internal Control.",
@@ -247,6 +247,16 @@ export const onboardingSections: HelpStepSection[] = [
     ]
   }
 ];
+
+export const integrityReportSharing = {
+  title: "Integrity Report Sharing",
+  body: [
+    "The Integrity Report is the external-facing trust report that summarizes a business's readiness, control status, evidence confidence, and risk indicators.",
+    "Only the CEO controls when an Integrity Report is shared with an institution. Before granting access, the CEO should review the business profile summary, VeriScore, IC Score, evidence confidence, open risk flags, resolved exceptions, and credit readiness signal.",
+    "Institution users only see approved trust intelligence. They do not see raw staff reports, private evidence files, raw operational records, internal dashboard activity, or analyst notes by default.",
+    "Analysts may support readiness review, but they do not replace CEO ownership and cannot grant external report access on behalf of the CEO."
+  ]
+};
 
 export const dashboardSummaries = [
   { title: "CEO Dashboard", items: ["Business profile status", "VeriScore", "IC Score", "Evidence completion", "KPI setup", "Departments", "Staff management", "IC action queue", "Integrity Report sharing", "Institution access"] },
