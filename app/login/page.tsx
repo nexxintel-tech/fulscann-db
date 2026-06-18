@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p>
           {createMode
             ? "Create a Business CEO account to begin onboarding. Fulscann internal roles and staff users are provisioned separately."
-            : "Fulscann is an internal control system for SMEs that want to scale Use your account to access the dashboard for your role. Analyst access should be provisioned internally."}
+            : "Fulscann is an internal control system for SMEs that want to scale. Use your account to access the dashboard for your role. Analyst access can be provisioned on your request."}
         </p>
       </section>
 
