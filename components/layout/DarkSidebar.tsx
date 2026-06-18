@@ -61,7 +61,7 @@ export function DarkSidebar({
       <section className="sidebar-section account-actions">
         <h2>Support</h2>
         <Link href="/login">Settings</Link>
-        <Link href="/login">Help center</Link>
+        <Link href="/help/getting-started">Help center</Link>
         <form action={signOut}>
           <button type="submit">Sign out</button>
         </form>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type TopBarProps = {
@@ -23,7 +24,7 @@ export function TopBar({
       <div className="topbar-actions">
         {actionArea}
         <button className="icon-button" type="button" aria-label="Notifications">N</button>
-        <button className="icon-button" type="button" aria-label="Help">?</button>
+        <Link className="icon-button" href="/help/getting-started" aria-label="Help">?</Link>
         <div className="topbar-profile">
           <div className="avatar compact" aria-hidden="true">{getInitials(userName)}</div>
           <div>
