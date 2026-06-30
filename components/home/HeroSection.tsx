@@ -27,9 +27,9 @@ export function HeroSection() {
         </p>
 
         <div className="home-hero-actions">
-          <Link className="button primary" href="/help/getting-started">
+          <a className="button primary" href="https://verilab.fulscann.com/login?mode=create">
             Get started
-          </Link>
+          </a>
           <a className="button secondary" href={bookDemoHref}>
             Book a demo
           </a>
