@@ -26,9 +26,9 @@ export function HomeHeader() {
           <a className="button secondary" href={bookDemoHref}>
             Book a demo
           </a>
-          <Link className="button primary" href="/help/getting-started">
+          <a className="button primary" href="https://verilab.fulscann.com/login?mode=create">
             Get started
-          </Link>
+          </a>
         </div>
       </div>
     </header>

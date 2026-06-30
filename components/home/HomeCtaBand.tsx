@@ -10,12 +10,12 @@ export function HomeCtaBand() {
         <p>Join organizations building secure, compliant, and intelligent business ecosystems with Fulscann.</p>
       </div>
       <div className="home-cta-actions">
-        <Link className="button secondary" href={bookDemoHref}>
+        <a className="button secondary" href={bookDemoHref}>
           Book a demo
-        </Link>
-        <Link className="button primary" href="/help/getting-started">
+        </a>
+        <a className="button primary" href="https://verilab.fulscann.com/login?mode=create">
           Get started now
-        </Link>
+        </a>
       </div>
     </section>
   );
