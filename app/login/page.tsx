@@ -12,6 +12,72 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="stack">
+      <section
+        className="card"
+        style={{
+          overflow: "hidden",
+          padding: 0,
+          border: "1px solid rgba(148, 163, 184, 0.28)",
+          background:
+            "radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 32%), radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.18), transparent 32%), #020617",
+          color: "white",
+        }}
+      >
+        <div
+          style={{
+            padding: "64px 28px",
+            textAlign: "center",
+            position: "relative",
+          }}
+        >
+          <p
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.10)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "#bfdbfe",
+              fontWeight: 800,
+              fontSize: 13,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: 20,
+            }}
+          >
+            Fulscann Trust Intelligence
+          </p>
+
+          <h1
+            style={{
+              maxWidth: 860,
+              margin: "0 auto",
+              fontSize: "clamp(2.8rem, 8vw, 6.2rem)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.06em",
+              fontWeight: 950,
+            }}
+          >
+            Ready to scale? Get started with Trust
+          </h1>
+
+          <p
+            style={{
+              maxWidth: 720,
+              margin: "24px auto 0",
+              color: "rgba(226,232,240,0.86)",
+              fontSize: "clamp(1rem, 2vw, 1.25rem)",
+              lineHeight: 1.7,
+            }}
+          >
+            Access the Fulscann control workspace built to help SMEs structure evidence,
+            monitor trust signals, improve readiness, and operate with decision confidence.
+          </p>
+        </div>
+      </section>
+
       <section className="page-title">
         <h1>{createMode ? "Create account" : "Sign in"}</h1>
         <p>
@@ -25,21 +91,31 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {params.created ? (
           <p className="notice">{getCreatedMessage(params.created)}</p>
         ) : null}
+
         {params.error ? (
-          <p style={{ color: "var(--danger)", marginBottom: 16 }}>{getLoginErrorMessage(params.error)}</p>
-        ) : null}
-        {!supabaseConfigured ? (
-          <p style={{ marginBottom: 16 }}>
-            Supabase is not configured, so this build is running in demo mode. Submitting will open the Super Admin
-            dashboard.
+          <p style={{ color: "var(--danger)", marginBottom: 16 }}>
+            {getLoginErrorMessage(params.error)}
           </p>
         ) : null}
+
+        {!supabaseConfigured ? (
+          <p style={{ marginBottom: 16 }}>
+            Supabase is not configured, so this build is running in demo mode.
+            Submitting will open the Super Admin dashboard.
+          </p>
+        ) : null}
+
         {createMode ? <CreateAccountForm /> : <SignInForm />}
+
         <p style={{ marginTop: 16 }}>
           {createMode ? (
-            <a className="button" href="/login">Use an existing account</a>
+            <a className="button" href="/login">
+              Use an existing account
+            </a>
           ) : (
-            <a className="button" href="/login?mode=create">Create Business CEO account</a>
+            <a className="button" href="/login?mode=create">
+              Create Business CEO account
+            </a>
           )}
         </p>
       </section>
@@ -54,10 +130,12 @@ function SignInForm() {
         Email
         <input name="email" type="email" required placeholder="you@example.com" />
       </label>
+
       <label>
         Password
         <input name="password" type="password" required placeholder="Password" />
       </label>
+
       <button className="button primary" type="submit">
         Sign in
       </button>
@@ -70,20 +148,42 @@ function CreateAccountForm() {
     <form action={createBusinessAccount} className="form">
       <label>
         Full name
-        <input name="fullName" required minLength={2} maxLength={120} placeholder="Business owner name" />
+        <input
+          name="fullName"
+          required
+          minLength={2}
+          maxLength={120}
+          placeholder="Business owner name"
+        />
       </label>
+
       <label>
         Email
         <input name="email" type="email" required placeholder="ceo@example.com" />
       </label>
+
       <label>
         Password
-        <input name="password" type="password" required minLength={8} placeholder="At least 8 characters" />
+        <input
+          name="password"
+          type="password"
+          required
+          minLength={8}
+          placeholder="At least 8 characters"
+        />
       </label>
+
       <label>
         Confirm password
-        <input name="confirmPassword" type="password" required minLength={8} placeholder="Repeat password" />
+        <input
+          name="confirmPassword"
+          type="password"
+          required
+          minLength={8}
+          placeholder="Repeat password"
+        />
       </label>
+
       <button className="button primary" type="submit">
         Create account
       </button>
