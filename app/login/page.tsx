@@ -113,8 +113,36 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               Use an existing account
             </a>
           ) : (
-            <a className="button" href="/login?mode=create">
-              Create Business CEO account
+            <a
+              href="/login?mode=create"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                padding: "14px 22px",
+                borderRadius: 999,
+                textDecoration: "none",
+                fontWeight: 700,
+                color: "#fff",
+                background:
+                  "linear-gradient(90deg, #2563eb 0%, #4f46e5 55%, #7c3aed 100%)",
+                boxShadow:
+                  "0 10px 30px rgba(37,99,235,.28), 0 4px 12px rgba(124,58,237,.18)",
+                transition: "all .25s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow =
+                  "0 16px 36px rgba(37,99,235,.35), 0 8px 20px rgba(124,58,237,.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 10px 30px rgba(37,99,235,.28), 0 4px 12px rgba(124,58,237,.18)";
+              }}
+            >
+              Create Business CEO Account
             </a>
           )}
         </p>
