@@ -89,6 +89,26 @@ a {
   padding: 9px 12px;
 }
 
+.login-create-link {
+  align-items: center;
+  background: linear-gradient(90deg, #2563eb 0%, #4f46e5 55%, #7c3aed 100%);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.28), 0 4px 12px rgba(124, 58, 237, 0.18);
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+  padding: 14px 22px;
+  text-decoration: none;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  width: 100%;
+}
+
+.login-create-link:hover {
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.35), 0 8px 20px rgba(124, 58, 237, 0.25);
+  transform: translateY(-2px);
+}
+
 .main {
   width: min(1440px, calc(100% - 32px));
   margin: 0 auto;
