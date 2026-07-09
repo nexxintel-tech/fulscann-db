@@ -48,7 +48,7 @@ export function HomeFooter() {
       </div>
 
       <div className="footer-credit">
-        © 2026 Fulscann Technologies Ltd. All rights reserved.
+        &copy; 2026 Fulscann Technologies Ltd. All rights reserved.
       </div>
     </footer>
   );

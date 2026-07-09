@@ -25,7 +25,7 @@ export function BlogSection() {
               <h3>{post.title}</h3>
               <p>{post.summary}</p>
               <a className="blog-read-more" href={post.href}>
-                Read more →
+                Read more &rarr;
               </a>
             </div>
           </article>

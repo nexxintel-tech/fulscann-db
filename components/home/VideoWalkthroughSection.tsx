@@ -14,7 +14,7 @@ export function VideoWalkthroughSection() {
         <div className="home-video-checklist">
           {featuredVideo.checklist.map((item) => (
             <div key={item} className="check-item">
-              <span aria-hidden="true">✓</span>
+              <span aria-hidden="true">&#10003;</span>
               <p>{item}</p>
             </div>
           ))}
@@ -33,7 +33,7 @@ export function VideoWalkthroughSection() {
         <div className="video-preview">
           <div className="video-playback">
             <button className="video-play-button" aria-label="Play walkthrough video">
-              ▶
+              &#9658;
             </button>
           </div>
           <div className="video-dashboard">
