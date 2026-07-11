@@ -10,6 +10,10 @@ export function canSelfRegisterRole(role: PlatformRole) {
   return role === SELF_SERVICE_SIGNUP_ROLE;
 }
 
-export function normalizeSignupEmail(email: string) {
+export function normalizeAuthEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+export function normalizeSignupEmail(email: string) {
+  return normalizeAuthEmail(email);
 }

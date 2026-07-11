@@ -1,8 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { Route } from "next";
+import { headers } from "next/headers";
 import { z } from "zod";
-import { getSelfServiceSignupRole, normalizeSignupEmail } from "@/lib/auth/signup";
+import { getSelfServiceSignupRole, normalizeAuthEmail } from "@/lib/auth/signup";
+import {
+  buildPasswordResetRedirect,
+  parsePasswordResetEmail,
+  updatePasswordSchema
+} from "@/lib/auth/password-reset";
+import {
+  getStableSignupErrorCode,
+  recoverProfile,
+  upsertProfile
+} from "@/lib/auth/profile-recovery";
 import { hasSupabaseConfig, hasSupabaseServiceConfig } from "@/lib/supabase/config";
 import { createSupabaseAdminClient, createSupabaseRouteClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getDefaultRouteForProfile } from "@/lib/auth/session";
@@ -17,12 +29,70 @@ const createAccountSchema = z.object({
   path: ["confirmPassword"]
 });
 
+function redirectToLoginRoute(path: string): never {
+  redirect(path as Route);
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  if (!hasSupabaseConfig()) {
+    redirectToLoginRoute("/forgot-password?sent=demo");
+  }
+
+  const email = parsePasswordResetEmail(formData.get("email"));
+
+  if (!email) {
+    redirectToLoginRoute("/forgot-password?error=invalid-email");
+  }
+
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const protocol = headerStore.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${protocol}://${host}` : "http://localhost:3000";
+  const supabase = await createSupabaseRouteClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: buildPasswordResetRedirect(origin)
+  });
+
+  if (error) {
+    redirectToLoginRoute("/forgot-password?error=reset-email-failed");
+  }
+
+  redirectToLoginRoute("/forgot-password?sent=check-email");
+}
+
+export async function updatePassword(formData: FormData) {
+  if (!hasSupabaseConfig()) {
+    redirect("/login?reset=demo");
+  }
+
+  const parsed = updatePasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword")
+  });
+
+  if (!parsed.success) {
+    redirectToLoginRoute("/reset-password?error=invalid-reset-password");
+  }
+
+  const supabase = await createSupabaseRouteClient();
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password
+  });
+
+  if (error) {
+    redirectToLoginRoute("/reset-password?error=update-password-failed");
+  }
+
+  await supabase.auth.signOut();
+  redirect("/login?reset=password-updated");
+}
+
 export async function signInWithEmailPassword(formData: FormData) {
   if (!hasSupabaseConfig()) {
     redirect("/dashboard/super-admin");
   }
 
-  const email = String(formData.get("email") ?? "");
+  const email = normalizeAuthEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
 
   const supabase = await createSupabaseRouteClient();
@@ -33,7 +103,35 @@ export async function signInWithEmailPassword(formData: FormData) {
   }
 
   const profile = await getCurrentProfile();
-  redirect(profile ? await getDefaultRouteForProfile(profile) : "/login?error=missing-profile");
+
+  if (profile) {
+    redirect(await getDefaultRouteForProfile(profile));
+  }
+
+  if (!hasSupabaseServiceConfig()) {
+    redirect("/login?error=profile-recovery-unavailable");
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?error=missing-profile");
+  }
+
+  const recoveryError = await recoverProfile(createSupabaseAdminClient(), {
+    id: user.id,
+    email: user.email,
+    user_metadata: user.user_metadata
+  });
+
+  if (recoveryError) {
+    redirect(`/login?error=${recoveryError}`);
+  }
+
+  const recoveredProfile = await getCurrentProfile();
+  redirect(recoveredProfile ? await getDefaultRouteForProfile(recoveredProfile) : "/login?error=profile-recovery-failed");
 }
 
 export async function createBusinessAccount(formData: FormData) {
@@ -57,7 +155,7 @@ export async function createBusinessAccount(formData: FormData) {
   }
 
   const supabase = await createSupabaseRouteClient();
-  const email = normalizeSignupEmail(parsed.data.email);
+  const email = normalizeAuthEmail(parsed.data.email);
   const platformRole = getSelfServiceSignupRole();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -71,17 +169,19 @@ export async function createBusinessAccount(formData: FormData) {
   });
 
   if (error || !data.user) {
-    redirect(`/login?mode=create&error=${encodeURIComponent(error?.message ?? "create-account-failed")}`);
+    redirect(`/login?mode=create&error=${getStableSignupErrorCode(error)}`);
   }
 
-  await createSupabaseAdminClient()
-    .from("profiles")
-    .upsert({
-      id: data.user.id,
-      email,
-      full_name: parsed.data.fullName,
-      platform_role: platformRole
-    });
+  const profileCreateError = await upsertProfile(createSupabaseAdminClient(), {
+    id: data.user.id,
+    email,
+    full_name: parsed.data.fullName,
+    platform_role: platformRole
+  });
+
+  if (profileCreateError) {
+    redirect(`/login?mode=create&error=${profileCreateError}`);
+  }
 
   if (!data.session) {
     redirect("/login?created=check-email");

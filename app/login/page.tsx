@@ -2,7 +2,7 @@ import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createBusinessAccount, signInWithEmailPassword } from "@/app/login/actions";
 
 type LoginPageProps = {
-  searchParams: Promise<{ created?: string; error?: string; mode?: string }>;
+  searchParams: Promise<{ created?: string; error?: string; mode?: string; reset?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -98,6 +98,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
 
+        {params.reset ? (
+          <p className="notice">{getPasswordResetMessage(params.reset)}</p>
+        ) : null}
+
         {!supabaseConfigured ? (
           <p style={{ marginBottom: 16 }}>
             Supabase is not configured, so this build is running in demo mode.
@@ -142,6 +146,10 @@ function SignInForm() {
       <button className="button primary" type="submit">
         Sign in
       </button>
+
+      <a href="/forgot-password" style={{ color: "#2563eb", fontWeight: 700 }}>
+        Forgot password?
+      </a>
     </form>
   );
 }
@@ -203,8 +211,24 @@ function getLoginErrorMessage(error: string) {
     return "Account creation requires server-side Supabase service configuration.";
   }
 
+  if (error === "create-account-failed") {
+    return "Account creation could not be completed. Try again or contact Fulscann support.";
+  }
+
+  if (error === "profile-create-failed") {
+    return "Account authentication was created, but the Fulscann profile could not be completed. Contact Fulscann support before signing in again.";
+  }
+
   if (error === "missing-profile") {
     return "Sign-in succeeded, but this Auth user does not have a Fulscann profile yet.";
+  }
+
+  if (error === "profile-recovery-unavailable") {
+    return "Sign-in succeeded, but this profile cannot be recovered automatically. Contact Fulscann support.";
+  }
+
+  if (error === "profile-recovery-failed") {
+    return "Sign-in succeeded, but Fulscann could not recover this profile automatically. Contact Fulscann support.";
   }
 
   if (error === "staff-invite-login") {
@@ -220,4 +244,16 @@ function getCreatedMessage(status: string) {
   }
 
   return "Account created.";
+}
+
+function getPasswordResetMessage(status: string) {
+  if (status === "password-updated") {
+    return "Password updated. Sign in with your new password.";
+  }
+
+  if (status === "demo") {
+    return "Supabase is not configured, so password reset is disabled in demo mode.";
+  }
+
+  return "Password reset complete.";
 }

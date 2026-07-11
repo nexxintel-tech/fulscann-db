@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { canSelfRegisterRole, getSelfServiceSignupRole, normalizeSignupEmail } from "@/lib/auth/signup";
+import {
+  canSelfRegisterRole,
+  getSelfServiceSignupRole,
+  normalizeAuthEmail,
+  normalizeSignupEmail
+} from "@/lib/auth/signup";
 
 describe("self-service signup policy", () => {
   it("allows only Business CEO accounts to self-register", () => {
@@ -12,5 +17,6 @@ describe("self-service signup policy", () => {
 
   it("normalizes account emails before Auth/profile creation", () => {
     expect(normalizeSignupEmail("  CEO@Example.COM ")).toBe("ceo@example.com");
+    expect(normalizeAuthEmail("  User@Example.COM ")).toBe("user@example.com");
   });
 });
