@@ -7,11 +7,15 @@ import { z } from "zod";
 import { getSelfServiceSignupRole, normalizeAuthEmail } from "@/lib/auth/signup";
 import {
   buildPasswordResetRedirect,
+  buildSignupEmailRedirect,
+  getCanonicalAppOrigin,
   parsePasswordResetEmail,
   updatePasswordSchema
 } from "@/lib/auth/password-reset";
 import {
+  buildCreateAccountErrorRedirect,
   getStableSignupErrorCode,
+  logSignupFailure,
   recoverProfile,
   upsertProfile
 } from "@/lib/auth/profile-recovery";
@@ -33,6 +37,15 @@ function redirectToLoginRoute(path: string): never {
   redirect(path as Route);
 }
 
+async function getAuthRedirectOrigin() {
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const protocol = headerStore.get("x-forwarded-proto") ?? "https";
+  const fallbackOrigin = host ? `${protocol}://${host}` : "http://localhost:3000";
+
+  return getCanonicalAppOrigin(fallbackOrigin);
+}
+
 export async function requestPasswordReset(formData: FormData) {
   if (!hasSupabaseConfig()) {
     redirectToLoginRoute("/forgot-password?sent=demo");
@@ -44,10 +57,7 @@ export async function requestPasswordReset(formData: FormData) {
     redirectToLoginRoute("/forgot-password?error=invalid-email");
   }
 
-  const headerStore = await headers();
-  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const protocol = headerStore.get("x-forwarded-proto") ?? "https";
-  const origin = host ? `${protocol}://${host}` : "http://localhost:3000";
+  const origin = await getAuthRedirectOrigin();
   const supabase = await createSupabaseRouteClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: buildPasswordResetRedirect(origin)
@@ -161,6 +171,7 @@ export async function createBusinessAccount(formData: FormData) {
     email,
     password: parsed.data.password,
     options: {
+      emailRedirectTo: buildSignupEmailRedirect(await getAuthRedirectOrigin()),
       data: {
         full_name: parsed.data.fullName,
         platform_role: platformRole
@@ -169,7 +180,8 @@ export async function createBusinessAccount(formData: FormData) {
   });
 
   if (error || !data.user) {
-    redirect(`/login?mode=create&error=${getStableSignupErrorCode(error)}`);
+    logSignupFailure(error);
+    redirectToLoginRoute(buildCreateAccountErrorRedirect(getStableSignupErrorCode(error)));
   }
 
   const profileCreateError = await upsertProfile(createSupabaseAdminClient(), {
@@ -180,7 +192,7 @@ export async function createBusinessAccount(formData: FormData) {
   });
 
   if (profileCreateError) {
-    redirect(`/login?mode=create&error=${profileCreateError}`);
+    redirectToLoginRoute(buildCreateAccountErrorRedirect(profileCreateError));
   }
 
   if (!data.session) {

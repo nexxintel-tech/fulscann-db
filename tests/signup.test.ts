@@ -19,4 +19,11 @@ describe("self-service signup policy", () => {
     expect(normalizeSignupEmail("  CEO@Example.COM ")).toBe("ceo@example.com");
     expect(normalizeAuthEmail("  User@Example.COM ")).toBe("user@example.com");
   });
+
+  it("uses the same normalization behavior for sign-in and signup emails", () => {
+    const submittedEmail = "  Business.Owner@Example.COM ";
+
+    expect(normalizeAuthEmail(submittedEmail)).toBe("business.owner@example.com");
+    expect(normalizeSignupEmail(submittedEmail)).toBe(normalizeAuthEmail(submittedEmail));
+  });
 });

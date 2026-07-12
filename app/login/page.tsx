@@ -215,8 +215,12 @@ function getLoginErrorMessage(error: string) {
     return "Account creation could not be completed. Try again or contact Fulscann support.";
   }
 
-  if (error === "profile-create-failed") {
-    return "Account authentication was created, but the Fulscann profile could not be completed. Contact Fulscann support before signing in again.";
+  if (error === "email-already-registered") {
+    return "An account already exists for this email. Sign in with the existing account or reset the password.";
+  }
+
+  if (error === "profile-creation-failed") {
+    return "Your account was created, but we could not finish setting up your profile. Please contact support or try signing in again.";
   }
 
   if (error === "missing-profile") {

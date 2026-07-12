@@ -28,6 +28,26 @@ export function parsePasswordResetEmail(email: FormDataEntryValue | null) {
   return parsed.success ? parsed.data.email : null;
 }
 
+export function getCanonicalAppOrigin(fallbackOrigin: string) {
+  return removeTrailingSlash(process.env.NEXT_PUBLIC_APP_URL || fallbackOrigin);
+}
+
 export function buildPasswordResetRedirect(origin: string) {
-  return `${origin}/auth/callback?next=/reset-password`;
+  return `${removeTrailingSlash(origin)}/auth/callback?next=/reset-password`;
+}
+
+export function buildSignupEmailRedirect(origin: string) {
+  return `${removeTrailingSlash(origin)}/auth/callback?next=/dashboard/ceo/onboarding`;
+}
+
+export function getSafeAuthCallbackNextPath(next: string | null) {
+  if (next === "/reset-password" || next === "/dashboard/ceo/onboarding") {
+    return next;
+  }
+
+  return "/reset-password";
+}
+
+function removeTrailingSlash(url: string) {
+  return url.replace(/\/+$/, "");
 }

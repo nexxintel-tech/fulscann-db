@@ -11,11 +11,23 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 DATABASE_URL=postgresql://postgres.your-project-ref:password@aws-0-region.pooler.supabase.com:6543/postgres
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://verilab.fulscann.com
 APP_ENV=local
 ```
 
 Keep `SUPABASE_SERVICE_ROLE_KEY` server-only. It is required for staff invitation acceptance because the invited user is not yet a business member when the membership row is created.
+
+`NEXT_PUBLIC_APP_URL` is the canonical browser origin used in Supabase Auth email links. Do not include a trailing slash.
+
+Examples:
+
+```bash
+# Production
+NEXT_PUBLIC_APP_URL=https://verilab.fulscann.com
+
+# Local development
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
 ## Apply Database
 
@@ -41,7 +53,10 @@ In Supabase Auth:
 
 1. Enable Email provider.
 2. Set Site URL to `NEXT_PUBLIC_APP_URL`.
-3. Add redirect URLs for local and deployed environments.
+3. Add redirect URLs for local and deployed environments:
+   - `https://verilab.fulscann.com/auth/callback`
+   - `http://localhost:3000/auth/callback`
+   - any staging callback URL, for example `https://staging.example.com/auth/callback`
 4. Create initial users for:
    - Fulscann Super Admin
    - Fulscann Analyst
@@ -49,6 +64,50 @@ In Supabase Auth:
    - Staff invitee
 
 The `profiles` table must contain a row for internal users. Staff invite acceptance can create or update the invited user's profile automatically.
+
+Supabase Auth sends the signup confirmation and password-reset emails. The application does not call Resend directly for these Auth emails.
+
+### Auth Email Redirects
+
+The app sends explicit Supabase Auth redirect URLs from server actions:
+
+- Signup confirmation: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/dashboard/ceo/onboarding`
+- Forgot password: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`
+
+If `NEXT_PUBLIC_APP_URL` is missing in local development, the app falls back to the request host headers and finally `http://localhost:3000`. Production must set `NEXT_PUBLIC_APP_URL`.
+
+The forgot-password flow is:
+
+1. User opens `/forgot-password`.
+2. The server action calls `supabase.auth.resetPasswordForEmail()` with `redirectTo` set to `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`.
+3. Supabase Auth sends the reset email through the configured Auth SMTP provider.
+4. User opens the email link.
+5. Supabase redirects to `/auth/callback?next=/reset-password` with a recovery code.
+6. `/auth/callback` exchanges the code for a Supabase session cookie and redirects to `/reset-password`.
+7. User submits a new password.
+8. The server action calls `supabase.auth.updateUser({ password })`, signs the user out, and redirects to `/login?reset=password-updated`.
+
+### Resend SMTP for Supabase Auth
+
+For production, configure Resend as Supabase custom SMTP in the Supabase dashboard. Do not add a Resend API call to the app for Supabase Auth emails.
+
+Use these SMTP settings:
+
+```text
+Host: smtp.resend.com
+Port: 587 or 465
+Username: resend
+Password: RESEND_API_KEY
+Sender: no-reply@<verified-domain>
+```
+
+The sender domain must be verified in Resend before production use. Configure DNS for the sending domain:
+
+- SPF: authorize Resend to send mail for the domain.
+- DKIM: add the Resend DKIM records.
+- DMARC: publish a DMARC policy for the domain.
+
+After DNS verification, send a test signup and password-reset email from Supabase Auth and confirm the links resolve to the expected `/auth/callback` URL.
 
 ## Bootstrap Real Profiles
 
