@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabasePasswordResetClient } from "@/lib/supabase/password-reset-browser";
 
 type ResetStatus = "checking" | "ready" | "loading" | "success" | "error";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => createSupabasePasswordResetClient(), []);
   const [status, setStatus] = useState<ResetStatus>("checking");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,9 +19,10 @@ export default function ResetPasswordPage() {
       const params = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const code = params.get("code");
+      const tokenHash = params.get("token_hash");
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
-      const recoveryType = hashParams.get("type");
+      const recoveryType = params.get("type") ?? hashParams.get("type");
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -43,6 +44,25 @@ export default function ResetPasswordPage() {
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (error) {
+          setStatus("error");
+          setErrorMessage("This password reset link is invalid or expired. Request a new link.");
+          return;
+        }
+
+        window.history.replaceState(null, "", "/reset-password");
+      }
+
+      if (tokenHash && recoveryType === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery"
         });
 
         if (!isMounted) {
@@ -145,35 +165,43 @@ export default function ResetPasswordPage() {
           <p style={{ color: "var(--danger)", marginBottom: 16 }}>{errorMessage}</p>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="form">
-          <label>
-            New password
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              placeholder="At least 8 characters"
-              disabled={isBusy || status === "error"}
-            />
-          </label>
+        {status === "error" ? (
+          <p>
+            <a className="button primary" href="/forgot-password">
+              Request a new reset link
+            </a>
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="form">
+            <label>
+              New password
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                placeholder="At least 8 characters"
+                disabled={isBusy}
+              />
+            </label>
 
-          <label>
-            Confirm new password
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              placeholder="Repeat password"
-              disabled={isBusy || status === "error"}
-            />
-          </label>
+            <label>
+              Confirm new password
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                placeholder="Repeat password"
+                disabled={isBusy}
+              />
+            </label>
 
-          <button className="button primary" type="submit" disabled={isBusy || status === "error"}>
-            {status === "loading" ? "Updating..." : "Update password"}
-          </button>
-        </form>
+            <button className="button primary" type="submit" disabled={isBusy}>
+              {status === "loading" ? "Updating..." : "Update password"}
+            </button>
+          </form>
+        )}
 
         <p style={{ marginTop: 16 }}>
           <a className="button" href="/login">

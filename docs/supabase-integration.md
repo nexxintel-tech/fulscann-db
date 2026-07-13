@@ -52,7 +52,7 @@ For a production project, avoid `db reset`; apply migrations only and create use
 In Supabase Auth:
 
 1. Enable Email provider.
-2. Set Site URL to `NEXT_PUBLIC_APP_URL`.
+2. Set Site URL to `NEXT_PUBLIC_APP_URL`. Use the app origin only, for example `https://verilab.fulscann.com`, not `/login` or another page path.
 3. Add redirect URLs for local and deployed environments:
    - `https://verilab.fulscann.com/auth/callback`
    - `https://verilab.fulscann.com/reset-password`
@@ -85,8 +85,8 @@ The forgot-password flow is:
 2. The browser page calls `supabase.auth.resetPasswordForEmail()` with `redirectTo` set to `${window.location.origin}/reset-password`.
 3. Supabase Auth sends the reset email through the configured Auth SMTP provider.
 4. User opens the email link.
-5. Supabase redirects to `/reset-password` with either `?code=...` or hash tokens such as `#access_token=...&refresh_token=...&type=recovery`.
-6. `/reset-password` exchanges the code or sets the hash-token recovery session in the browser.
+5. Supabase redirects to `/reset-password` with hash tokens such as `#access_token=...&refresh_token=...&type=recovery`. The page also accepts `?code=...` and `?token_hash=...&type=recovery` links for compatibility.
+6. `/reset-password` exchanges the code, verifies the token hash, or sets the hash-token recovery session in the browser.
 7. User submits a new password.
 8. The browser page calls `supabase.auth.updateUser({ password })`, signs the user out, and redirects to `/login?reset=password-updated`.
 
@@ -111,6 +111,12 @@ The sender domain must be verified in Resend before production use. Configure DN
 - DMARC: publish a DMARC policy for the domain.
 
 After DNS verification, send a test signup and password-reset email from Supabase Auth. Confirm signup links resolve to the expected `/auth/callback` URL and password-reset links resolve to `/reset-password`.
+
+If you customize the Supabase password recovery email template, use the direct reset page with a token hash:
+
+```text
+{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery
+```
 
 ## Bootstrap Real Profiles
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabasePasswordResetClient } from "@/lib/supabase/password-reset-browser";
 
 type RequestStatus = "idle" | "loading" | "success" | "error";
 
@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabasePasswordResetClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       // Supabase Auth must allow this URL under Authentication -> URL Configuration -> Redirect URLs:
       // https://your-domain.com/reset-password and http://localhost:3000/reset-password.
