@@ -55,8 +55,11 @@ In Supabase Auth:
 2. Set Site URL to `NEXT_PUBLIC_APP_URL`.
 3. Add redirect URLs for local and deployed environments:
    - `https://verilab.fulscann.com/auth/callback`
+   - `https://verilab.fulscann.com/reset-password`
    - `http://localhost:3000/auth/callback`
+   - `http://localhost:3000/reset-password`
    - any staging callback URL, for example `https://staging.example.com/auth/callback`
+   - any staging password reset URL, for example `https://staging.example.com/reset-password`
 4. Create initial users for:
    - Fulscann Super Admin
    - Fulscann Analyst
@@ -69,23 +72,23 @@ Supabase Auth sends the signup confirmation and password-reset emails. The appli
 
 ### Auth Email Redirects
 
-The app sends explicit Supabase Auth redirect URLs from server actions:
+The app sends explicit Supabase Auth redirect URLs:
 
 - Signup confirmation: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/dashboard/ceo/onboarding`
-- Forgot password: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`
+- Forgot password: `${window.location.origin}/reset-password` from the browser forgot-password page
 
 If `NEXT_PUBLIC_APP_URL` is missing in local development, the app falls back to the request host headers and finally `http://localhost:3000`. Production must set `NEXT_PUBLIC_APP_URL`.
 
 The forgot-password flow is:
 
 1. User opens `/forgot-password`.
-2. The server action calls `supabase.auth.resetPasswordForEmail()` with `redirectTo` set to `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`.
+2. The browser page calls `supabase.auth.resetPasswordForEmail()` with `redirectTo` set to `${window.location.origin}/reset-password`.
 3. Supabase Auth sends the reset email through the configured Auth SMTP provider.
 4. User opens the email link.
-5. Supabase redirects to `/auth/callback?next=/reset-password` with a recovery code.
-6. `/auth/callback` exchanges the code for a Supabase session cookie and redirects to `/reset-password`.
+5. Supabase redirects to `/reset-password` with either `?code=...` or hash tokens such as `#access_token=...&refresh_token=...&type=recovery`.
+6. `/reset-password` exchanges the code or sets the hash-token recovery session in the browser.
 7. User submits a new password.
-8. The server action calls `supabase.auth.updateUser({ password })`, signs the user out, and redirects to `/login?reset=password-updated`.
+8. The browser page calls `supabase.auth.updateUser({ password })`, signs the user out, and redirects to `/login?reset=password-updated`.
 
 ### Resend SMTP for Supabase Auth
 
@@ -107,7 +110,7 @@ The sender domain must be verified in Resend before production use. Configure DN
 - DKIM: add the Resend DKIM records.
 - DMARC: publish a DMARC policy for the domain.
 
-After DNS verification, send a test signup and password-reset email from Supabase Auth and confirm the links resolve to the expected `/auth/callback` URL.
+After DNS verification, send a test signup and password-reset email from Supabase Auth. Confirm signup links resolve to the expected `/auth/callback` URL and password-reset links resolve to `/reset-password`.
 
 ## Bootstrap Real Profiles
 
