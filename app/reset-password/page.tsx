@@ -1,11 +1,106 @@
-import { updatePassword } from "@/app/login/actions";
+"use client";
 
-type ResetPasswordPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export default async function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
-  const params = await searchParams;
+type ResetStatus = "checking" | "ready" | "loading" | "success" | "error";
+
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [status, setStatus] = useState<ResetStatus>("checking");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function prepareResetSession() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (error) {
+          setStatus("error");
+          setErrorMessage("This password reset link is invalid or expired. Request a new link.");
+          return;
+        }
+
+        window.history.replaceState(null, "", "/reset-password");
+      }
+
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!session) {
+        setStatus("error");
+        setErrorMessage("This password reset link is invalid or expired. Request a new link.");
+        return;
+      }
+
+      setStatus("ready");
+    }
+
+    prepareResetSession().catch(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      setStatus("error");
+      setErrorMessage("Unable to verify this password reset link. Request a new link.");
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("loading");
+    setErrorMessage("");
+
+    const formData = new FormData(event.currentTarget);
+    const newPassword = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+    if (newPassword.length < 8 || confirmPassword.length < 8) {
+      setStatus("ready");
+      setErrorMessage("Enter matching passwords of at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setStatus("ready");
+      setErrorMessage("Passwords must match.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setStatus("ready");
+      setErrorMessage("Unable to update the password. Request a new reset link or contact Fulscann support.");
+      return;
+    }
+
+    setStatus("success");
+    await supabase.auth.signOut();
+    router.replace("/login?reset=password-updated");
+  }
+
+  const isBusy = status === "checking" || status === "loading" || status === "success";
 
   return (
     <div className="stack">
@@ -15,13 +110,19 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
       </section>
 
       <section className="card" style={{ maxWidth: 520 }}>
-        {params.error ? (
-          <p style={{ color: "var(--danger)", marginBottom: 16 }}>
-            {getResetPasswordErrorMessage(params.error)}
-          </p>
+        {status === "checking" ? (
+          <p className="notice">Verifying your password reset link...</p>
         ) : null}
 
-        <form action={updatePassword} className="form">
+        {status === "success" ? (
+          <p className="notice">Password updated. Redirecting you to sign in...</p>
+        ) : null}
+
+        {errorMessage ? (
+          <p style={{ color: "var(--danger)", marginBottom: 16 }}>{errorMessage}</p>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="form">
           <label>
             New password
             <input
@@ -30,6 +131,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
               required
               minLength={8}
               placeholder="At least 8 characters"
+              disabled={isBusy || status === "error"}
             />
           </label>
 
@@ -41,11 +143,12 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
               required
               minLength={8}
               placeholder="Repeat password"
+              disabled={isBusy || status === "error"}
             />
           </label>
 
-          <button className="button primary" type="submit">
-            Update password
+          <button className="button primary" type="submit" disabled={isBusy || status === "error"}>
+            {status === "loading" ? "Updating..." : "Update password"}
           </button>
         </form>
 
@@ -57,20 +160,4 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
       </section>
     </div>
   );
-}
-
-function getResetPasswordErrorMessage(error: string) {
-  if (error === "invalid-reset-password") {
-    return "Enter matching passwords of at least 8 characters.";
-  }
-
-  if (error === "reset-session-failed") {
-    return "This password reset link is invalid or expired. Request a new link.";
-  }
-
-  if (error === "update-password-failed") {
-    return "Unable to update the password. Request a new reset link or contact Fulscann support.";
-  }
-
-  return "Unable to reset this password.";
 }

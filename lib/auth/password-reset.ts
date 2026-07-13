@@ -33,7 +33,7 @@ export function getCanonicalAppOrigin(fallbackOrigin: string) {
 }
 
 export function buildPasswordResetRedirect(origin: string) {
-  return `${removeTrailingSlash(origin)}/auth/callback?next=/reset-password`;
+  return `${removeTrailingSlash(origin)}/reset-password`;
 }
 
 export function buildSignupEmailRedirect(origin: string) {

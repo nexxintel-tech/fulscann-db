@@ -1,11 +1,43 @@
-import { requestPasswordReset } from "@/app/login/actions";
+"use client";
 
-type ForgotPasswordPageProps = {
-  searchParams: Promise<{ error?: string; sent?: string }>;
-};
+import { useState, type FormEvent } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export default async function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {
-  const params = await searchParams;
+type RequestStatus = "idle" | "loading" | "success" | "error";
+
+export default function ForgotPasswordPage() {
+  const [status, setStatus] = useState<RequestStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("loading");
+    setErrorMessage("");
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+    if (!email) {
+      setStatus("error");
+      setErrorMessage("Enter a valid account email.");
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Supabase Auth must allow this URL under Authentication -> URL Configuration -> Redirect URLs:
+      // https://your-domain.com/reset-password and http://localhost:3000/reset-password.
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+
+    if (error) {
+      setStatus("error");
+      setErrorMessage("Unable to send a password reset email right now. Try again or contact Fulscann support.");
+      return;
+    }
+
+    setStatus("success");
+  }
 
   return (
     <div className="stack">
@@ -15,24 +47,22 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
       </section>
 
       <section className="card" style={{ maxWidth: 520 }}>
-        {params.sent ? (
-          <p className="notice">{getPasswordResetSentMessage(params.sent)}</p>
+        {status === "success" ? (
+          <p className="notice">If an account exists for that email, a password reset link has been sent.</p>
         ) : null}
 
-        {params.error ? (
-          <p style={{ color: "var(--danger)", marginBottom: 16 }}>
-            {getPasswordResetErrorMessage(params.error)}
-          </p>
+        {status === "error" ? (
+          <p style={{ color: "var(--danger)", marginBottom: 16 }}>{errorMessage}</p>
         ) : null}
 
-        <form action={requestPasswordReset} className="form">
+        <form onSubmit={handleSubmit} className="form">
           <label>
             Email
             <input name="email" type="email" required placeholder="you@example.com" />
           </label>
 
-          <button className="button primary" type="submit">
-            Send reset link
+          <button className="button primary" type="submit" disabled={status === "loading"}>
+            {status === "loading" ? "Sending..." : "Send reset link"}
           </button>
         </form>
 
@@ -44,24 +74,4 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
       </section>
     </div>
   );
-}
-
-function getPasswordResetSentMessage(status: string) {
-  if (status === "demo") {
-    return "Supabase is not configured, so password reset email delivery is disabled in demo mode.";
-  }
-
-  return "If an account exists for that email, a password reset link has been sent.";
-}
-
-function getPasswordResetErrorMessage(error: string) {
-  if (error === "invalid-email") {
-    return "Enter a valid account email.";
-  }
-
-  if (error === "reset-email-failed") {
-    return "Unable to send a password reset email right now. Try again or contact Fulscann support.";
-  }
-
-  return "Unable to process this password reset request.";
 }

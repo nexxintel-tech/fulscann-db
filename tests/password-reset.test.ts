@@ -20,9 +20,9 @@ describe("password reset policy", () => {
     expect(parsePasswordResetEmail("not-an-email")).toBeNull();
   });
 
-  it("builds reset links through the auth callback route", () => {
+  it("builds reset links directly to the password reset route", () => {
     expect(buildPasswordResetRedirect("https://verilab.fulscann.com/")).toBe(
-      "https://verilab.fulscann.com/auth/callback?next=/reset-password"
+      "https://verilab.fulscann.com/reset-password"
     );
   });
 
