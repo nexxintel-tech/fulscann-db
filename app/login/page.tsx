@@ -1,5 +1,6 @@
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createBusinessAccount, signInWithEmailPassword } from "@/app/login/actions";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 type LoginPageProps = {
   searchParams: Promise<{ created?: string; error?: string; mode?: string; reset?: string }>;
@@ -138,10 +139,7 @@ function SignInForm() {
         <input name="email" type="email" required placeholder="you@example.com" />
       </label>
 
-      <label>
-        Password
-        <input name="password" type="password" required placeholder="Password" />
-      </label>
+      <PasswordField label="Password" name="password" required placeholder="Password" />
 
       <button className="button primary" type="submit">
         Sign in
@@ -173,27 +171,21 @@ function CreateAccountForm() {
         <input name="email" type="email" required placeholder="ceo@example.com" />
       </label>
 
-      <label>
-        Password
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          placeholder="At least 8 characters"
-        />
-      </label>
+      <PasswordField
+        label="Password"
+        name="password"
+        required
+        minLength={8}
+        placeholder="At least 8 characters"
+      />
 
-      <label>
-        Confirm password
-        <input
-          name="confirmPassword"
-          type="password"
-          required
-          minLength={8}
-          placeholder="Repeat password"
-        />
-      </label>
+      <PasswordField
+        label="Confirm password"
+        name="confirmPassword"
+        required
+        minLength={8}
+        placeholder="Repeat password"
+      />
 
       <button className="button primary" type="submit">
         Create account

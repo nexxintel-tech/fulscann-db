@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabasePasswordResetClient } from "@/lib/supabase/password-reset-browser";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 type ResetStatus = "checking" | "ready" | "loading" | "success" | "error";
 
@@ -173,29 +174,23 @@ export default function ResetPasswordPage() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="form">
-            <label>
-              New password
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                placeholder="At least 8 characters"
-                disabled={isBusy}
-              />
-            </label>
+            <PasswordField
+              label="New password"
+              name="password"
+              required
+              minLength={8}
+              placeholder="At least 8 characters"
+              disabled={isBusy}
+            />
 
-            <label>
-              Confirm new password
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={8}
-                placeholder="Repeat password"
-                disabled={isBusy}
-              />
-            </label>
+            <PasswordField
+              label="Confirm new password"
+              name="confirmPassword"
+              required
+              minLength={8}
+              placeholder="Repeat password"
+              disabled={isBusy}
+            />
 
             <button className="button primary" type="submit" disabled={isBusy}>
               {status === "loading" ? "Updating..." : "Update password"}

@@ -750,6 +750,33 @@ a {
   font-weight: 700;
 }
 
+.password-field {
+  display: grid;
+  gap: 7px;
+}
+
+.password-field > label:first-child {
+  color: #344054;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.password-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form .password-toggle input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
 .form-field {
   display: grid;
   gap: 7px;
